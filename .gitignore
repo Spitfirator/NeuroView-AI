@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ML Models
+*.keras
+*.h5
+*.pkl
+*.model
+
+
+# Environment
+.env
+.venv
+venv/
+ENV/
