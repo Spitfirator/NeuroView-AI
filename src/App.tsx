@@ -6,6 +6,7 @@ import UploadPanel from './components/UploadPanel';
 import { AnalysisProvider } from './context/AnalysisContext';
 import GradCAMViewer from './components/GradCAMViewer';
 import { useAnalysis } from './context/AnalysisContext';
+import AIAssistant from './components/AIAssistant';
 
 function MainContent() {
   const { analysis } = useAnalysis();
@@ -27,8 +28,9 @@ function MainContent() {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <AnalysisResults />
+          <AIAssistant />
         </div>
         <div className="lg:col-span-1">
           <UploadPanel />

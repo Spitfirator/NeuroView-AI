@@ -1,11 +1,32 @@
 import React from 'react';
-import { AlertCircle, Brain, Target, Calendar, ChevronRight } from 'lucide-react';
+import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2 } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 import SimilarCases from './SimilarCases';
+
+// Define the tumor type colors
+const TUMOR_COLORS = {
+  glioma: 'bg-blue-600',
+  meningioma: 'bg-blue-400',
+  pituitary: 'bg-blue-300',
+  notumor: 'bg-green-500'
+} as const;
+
+// Define the desired order
+const TUMOR_ORDER = ['glioma', 'meningioma', 'pituitary', 'notumor'] as const;
 
 export default function AnalysisResults() {
   const { analysis } = useAnalysis();
   
+  const handleExport = () => {
+    // In a real app, this would generate a PDF report
+    console.log('Exporting report...');
+  };
+
+  const handleShare = () => {
+    // In a real app, this would open a sharing modal
+    console.log('Opening share dialog...');
+  };
+
   if (!analysis.prediction) {
     return null;
   }
@@ -13,31 +34,55 @@ export default function AnalysisResults() {
   return (
     <div className="card p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-display font-semibold text-gray-900">AI Analysis Results</h2>
-        <span className="px-3 py-1 text-xs font-medium text-green-700 bg-green-50 rounded-full">Analysis Complete</span>
+        <div>
+          <h2 className="text-xl font-display font-semibold text-gray-900">AI Analysis Results</h2>
+          <p className="text-sm text-gray-500 mt-1">Last updated: {new Date().toLocaleString()}</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={handleShare}
+            className="btn-secondary"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Share
+          </button>
+          <button 
+            onClick={handleExport}
+            className="btn"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
+          </button>
+        </div>
       </div>
       
       <div className="space-y-8">
         <div className="border-b border-gray-100 pb-6">
-          <h3 className="text-sm font-medium text-gray-500 mb-4">Tumor Classification</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-gray-500">Tumor Classification</h3>
+            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center">
+              <History className="h-4 w-4 mr-1" />
+              View History
+            </button>
+          </div>
           <div className="space-y-3">
-            {Object.entries(analysis.confidenceScores).map(([label, score]) => (
+            {TUMOR_ORDER.map(label => (
               <div key={label} className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                  <span className={`w-2 h-2 ${TUMOR_COLORS[label]} rounded-full`}></span>
                   <span className="text-sm font-medium text-gray-900">
-                    {label.charAt(0).toUpperCase() + label.slice(1)}
+                    {label === 'notumor' ? 'No Tumor' : label.charAt(0).toUpperCase() + label.slice(1)}
                   </span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-32 h-2 bg-gray-100 rounded-full mr-3">
                     <div 
-                      className="h-full bg-blue-600 rounded-full"
-                      style={{ width: `${score * 100}%` }}
+                      className={`h-full ${TUMOR_COLORS[label]} rounded-full`}
+                      style={{ width: `${(analysis.confidenceScores[label] || 0) * 100}%` }}
                     ></div>
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
-                    {(score * 100).toFixed(1)}%
+                    {((analysis.confidenceScores[label] || 0) * 100).toFixed(1)}%
                   </span>
                 </div>
               </div>
