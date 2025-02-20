@@ -13,10 +13,9 @@ const formatFileSize = (bytes: number): string => {
 };
 
 export default function UploadPanel() {
-  const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const { updateAnalysis } = useAnalysis();
+  const { analysis, updateAnalysis, addUploadedFile, removeUploadedFile } = useAnalysis();
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -43,13 +42,7 @@ export default function UploadPanel() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
-    selectedFiles.forEach(file => {
-      console.log(`File: ${file.name}`);
-      console.log(`Raw size in bytes: ${file.size}`);
-      console.log(`Formatted size: ${formatFileSize(file.size)}`);
-    });
-    setFiles(prev => [...prev, ...selectedFiles]);
-
+    
     // Upload first file for prediction
     if (selectedFiles.length > 0) {
       setIsUploading(true);
@@ -60,11 +53,9 @@ export default function UploadPanel() {
       const imageUrl = URL.createObjectURL(selectedFiles[0]);
 
       try {
-        // Make sure this matches your FastAPI server port (usually 8000)
         const response = await fetch('http://localhost:8000/predict', {
           method: 'POST',
           body: formData,
-          // Add these headers explicitly
           headers: {
             'Accept': 'application/json',
           },
@@ -76,13 +67,13 @@ export default function UploadPanel() {
 
         const result = await response.json();
         
-        console.log('Prediction response:', result); // Debug log
-        
         if (result.success) {
           updateAnalysis({
             ...result,
-            imageUrl: imageUrl // Add the image URL to the analysis data
+            imageUrl: imageUrl
           });
+          // Add file to context after successful upload
+          addUploadedFile(selectedFiles[0]);
         } else {
           console.error('Prediction failed:', result.error);
           alert('Failed to analyze the image. Please try again.');
@@ -97,7 +88,7 @@ export default function UploadPanel() {
   };
 
   const removeFile = (indexToRemove: number) => {
-    setFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+    removeUploadedFile(indexToRemove);
   };
 
   return (
@@ -142,7 +133,7 @@ export default function UploadPanel() {
         </div>
       </div>
 
-      {files.length > 0 && (
+      {analysis.uploadedFiles.length > 0 && (
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-medium text-gray-900">Uploaded Files</h4>
@@ -156,7 +147,7 @@ export default function UploadPanel() {
             </button>
           </div>
           <div className="space-y-2">
-            {files.map((file, index) => (
+            {analysis.uploadedFiles.map((file, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors duration-200">
                 <div className="flex items-center">
                   <FileText className="h-5 w-5 text-blue-600" />

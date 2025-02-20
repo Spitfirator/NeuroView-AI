@@ -3,7 +3,7 @@ import { MessageSquare, Send, Loader2, CheckCircle2, XCircle, AlertCircle } from
 import { useAnalysis } from '../context/AnalysisContext';
 
 interface Message {
-  role: 'assistant' | 'user';
+  role: 'assistant' | 'user' | 'system';
   content: string;
   timestamp: Date;
 }
@@ -19,12 +19,21 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Hello, I can help analyze the MRI scans and provide detailed diagnostic insights. What would you like to know about the current case?',
+      content: "Hello! I'm your AI medical assistant. Please send me the system prompt to begin our analysis session.",
       timestamp: new Date(),
-    },
+    }
   ]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(() => `You are an AI medical assistant specializing in brain MRI analysis. You have access to:
+- Current MRI scan (when included in the message)
+- Tumor classification: ${analysis.prediction || 'Unknown'}
+- Confidence scores:
+${Object.entries(analysis.confidenceScores || {})
+  .map(([type, score]) => `  * ${type}: ${(score * 100).toFixed(1)}%`)
+  .join('\n')}
+
+Please provide detailed insights about the MRI findings when asked. Be specific about visible features and maintain a professional, medical tone.`);
   const [isLoading, setIsLoading] = useState(false);
+  const [includeImage, setIncludeImage] = useState(true);
   const [diagnosis, setDiagnosis] = useState<Diagnosis>({
     approved: null,
     tumorType: analysis.prediction || null,
@@ -46,17 +55,73 @@ export default function AIAssistant() {
     setInput('');
     setIsLoading(true);
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
+    try {
+      let imageBase64 = null;
+      if (includeImage && analysis.imageUrl) {
+        if (analysis.imageUrl.startsWith('data:image')) {
+          imageBase64 = analysis.imageUrl.split(',')[1];
+        } else {
+          const response = await fetch(analysis.imageUrl);
+          const blob = await response.blob();
+          imageBase64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64 = (reader.result as string).split(',')[1];
+              resolve(base64);
+            };
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+
+      const conversationHistory = messages
+        .filter(msg => msg.role !== 'system')
+        .map(({ role, content }) => ({
+          role,
+          content,
+        }));
+
+      conversationHistory.push({
+        role: 'user',
+        content: input,
+      });
+
+      const response = await fetch('http://localhost:8000/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: conversationHistory,
+          image: imageBase64,
+          max_tokens: 500,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const data = await response.json();
+      
       const aiResponse: Message = {
         role: 'assistant',
-        content: 'Based on the MRI scans, I observe a well-defined mass in the right temporal lobe measuring approximately 2.8 x 3.1 cm. The lesion shows characteristic features consistent with a glioma, including irregular enhancement patterns and surrounding edema. The location and imaging characteristics suggest a high-grade glioma (WHO grade III or IV). I recommend immediate neurosurgical consultation and consideration for stereotactic biopsy to confirm the diagnosis.',
+        content: data.response,
         timestamp: new Date(),
       };
+
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'I apologize, but I encountered an error processing your request. Please try again.',
+        timestamp: new Date(),
+      }]);
+    } finally {
       setIsLoading(false);
       setShowDiagnosisForm(true);
-    }, 1000);
+    }
   };
 
   const handleDiagnosisApproval = (approved: boolean) => {
@@ -68,6 +133,52 @@ export default function AIAssistant() {
     if (!approved) {
       setShowDiagnosisForm(true);
     }
+  };
+
+  const formatMessage = (content: string) => {
+    // Split the message by newlines and handle lists
+    return content.split('\n').map((line, index) => {
+      // Handle bullet points
+      if (line.startsWith('- ')) {
+        return (
+          <li key={index} className="ml-4 list-disc">
+            {line.substring(2)}
+          </li>
+        );
+      }
+      // Handle numbered lists
+      if (line.match(/^\d+\./)) {
+        return (
+          <li key={index} className="ml-4 list-decimal">
+            {line.substring(line.indexOf('.') + 2)}
+          </li>
+        );
+      }
+      // Handle confidence scores
+      if (line.startsWith('  * ')) {
+        return (
+          <li key={index} className="ml-8 list-none">
+            <span className="font-mono">{line}</span>
+          </li>
+        );
+      }
+      // Handle headers (lines ending with ':')
+      if (line.endsWith(':')) {
+        return (
+          <p key={index} className="font-semibold mt-2 mb-1">
+            {line}
+          </p>
+        );
+      }
+      // Regular paragraphs
+      return line ? (
+        <p key={index} className="mb-2">
+          {line}
+        </p>
+      ) : (
+        <br key={index} />
+      );
+    });
   };
 
   return (
@@ -104,14 +215,16 @@ export default function AIAssistant() {
               className={`flex ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`max-w-[80%] rounded-lg p-4 ${
                   message.role === 'assistant'
                     ? 'bg-gray-100 text-gray-900'
                     : 'bg-blue-600 text-white'
                 }`}
               >
-                <p className="text-sm">{message.content}</p>
-                <span className="text-xs opacity-70 mt-1 block">
+                <div className="prose prose-sm">
+                  {formatMessage(message.content)}
+                </div>
+                <span className="text-xs opacity-70 mt-2 block">
                   {message.timestamp.toLocaleTimeString()}
                 </span>
               </div>
@@ -119,8 +232,10 @@ export default function AIAssistant() {
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg p-3">
-                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              <div className="bg-gray-100 rounded-lg p-4">
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                </div>
               </div>
             </div>
           )}
@@ -196,21 +311,44 @@ export default function AIAssistant() {
         </div>
         
         <form onSubmit={handleSubmit} className="p-4 border-t border-gray-100">
-          <div className="flex space-x-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about the diagnosis..."
-              className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn px-4 py-2 disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setIncludeImage(!includeImage)}
+                className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                  includeImage 
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {includeImage ? '✓ Including MRI' : '+ Include MRI'}
+              </button>
+              {includeImage && (
+                <span className="text-xs text-gray-500">
+                  The AI will analyze the current MRI scan
+                </span>
+              )}
+            </div>
+            
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={includeImage 
+                  ? "Ask about the MRI scan..." 
+                  : "Ask about the diagnosis..."}
+                className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="btn px-4 py-2 disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </form>
       </div>
