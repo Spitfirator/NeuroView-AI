@@ -7,3 +7,5 @@ Pillow==10.1.0
 python-jose==3.3.0
 cors==1.0.1
 opencv-python==4.8.1.78
+openai
+python-dotenv

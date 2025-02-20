@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Query
+from fastapi import FastAPI, UploadFile, File, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import tensorflow as tf
@@ -6,9 +6,13 @@ import numpy as np
 from PIL import Image
 import io
 import cv2
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import datetime
 from tensorflow.keras.applications.resnet50 import preprocess_input
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
+from pydantic import BaseModel
 
 # Import the updated Grad-CAM utilities
 from .utils import generate_gradcam, encode_image, deprocess_image
@@ -32,6 +36,21 @@ LABELS = ['glioma', 'meningioma', 'notumor', 'pituitary']
 
 # Store predictions and their images for similarity matching
 case_database: List[Dict] = []
+
+# Load environment variables
+load_dotenv()
+
+# Initialize the OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: List[Dict[str, str]]
+    image: Optional[str] = None
+    max_tokens: int = 500
 
 def preprocess_image(image_bytes):
     """Preprocess the uploaded image for ResNet50 model prediction."""
@@ -152,3 +171,53 @@ async def get_similar_cases(case_type: str):
             "success": False,
             "error": str(e)
         }, status_code=500)
+
+@app.post("/chat")
+async def chat(request: ChatRequest):
+    try:
+        messages = request.messages
+
+        # If there's an image, format it properly for the vision model
+        if request.image:
+            # Find the last user message
+            for i in reversed(range(len(messages))):
+                if messages[i]["role"] == "user":
+                    # Format the message for vision model
+                    messages[i] = {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": messages[i]["content"]
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{request.image}",
+                                    "detail": "high"  # Use high detail for medical images
+                                }
+                            }
+                        ]
+                    }
+                    break
+            
+            # Use vision-capable model
+            model_name = "gpt-4o-mini"
+        else:
+            # Use text-only model
+            model_name = "gpt-4o-mini"
+
+        # Make the API call
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            max_tokens=request.max_tokens,
+        )
+
+        return {
+            "response": response.choices[0].message.content
+        }
+
+    except Exception as e:
+        print(f"Error in chat endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
