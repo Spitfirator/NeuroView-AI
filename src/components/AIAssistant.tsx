@@ -19,7 +19,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hello! I'm your AI medical assistant. Please send me the system prompt to begin our analysis session.",
+      content: "Hello! I'm your AI medical assistant. How can I help you today?",
       timestamp: new Date(),
     }
   ]);
