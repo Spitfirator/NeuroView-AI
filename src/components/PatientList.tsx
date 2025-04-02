@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Plus, Filter, ChevronRight, Users, FileText, AlertCircle, BarChart, Clock } from 'lucide-react';
 import { usePatients } from '../context/PatientContext';
+import NewPatientModal from './NewPatientModal';
 
 interface PatientListProps {
   onPatientSelect: (id: string) => void;
@@ -43,9 +44,10 @@ const upcomingAppointments: Appointment[] = [
 export default function PatientList({ onPatientSelect }: PatientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
   
-  // Get patients from context
-  const { patients } = usePatients();
+  // Get patients and addPatient function from context
+  const { patients, addPatient } = usePatients();
   
   // Filter patients based on search term
   const filteredPatients = patients.filter(patient => 
@@ -53,11 +55,39 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
     patient.condition.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const resetPatientData = () => {
+    if (confirm('This will reset all study data but keep your patients. Continue?')) {
+      // Get current patients from localStorage
+      const savedPatients = localStorage.getItem('patients');
+      if (savedPatients) {
+        // Parse the patients and clear studies for each patient
+        const patients = JSON.parse(savedPatients);
+        const resetPatients = patients.map(patient => ({
+          ...patient,
+          studies: [] // Clear all studies
+        }));
+        
+        // Save back to localStorage
+        localStorage.setItem('patients', JSON.stringify(resetPatients));
+        window.location.reload();
+      }
+    }
+  };
+  
+  // Handle saving a new patient
+  const handleSavePatient = (patientData) => {
+    addPatient(patientData);
+    setIsNewPatientModalOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-display font-semibold text-gray-900">Patients</h1>
-        <button className="btn">
+        <button 
+          className="btn"
+          onClick={() => setIsNewPatientModalOpen(true)}
+        >
           <Plus className="h-4 w-4 mr-2" />
           New Patient
         </button>
@@ -252,6 +282,20 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
           </div>
         </div>
       </div>
+
+      <button 
+        onClick={resetPatientData}
+        className="text-xs text-red-600 hover:text-red-800"
+      >
+        Reset Data
+      </button>
+      
+      {/* New Patient Modal */}
+      <NewPatientModal
+        isOpen={isNewPatientModalOpen}
+        onClose={() => setIsNewPatientModalOpen(false)}
+        onSave={handleSavePatient}
+      />
     </div>
   );
 }

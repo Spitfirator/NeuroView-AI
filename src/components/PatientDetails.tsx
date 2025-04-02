@@ -224,17 +224,19 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
                       <div className="flex items-center space-x-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           study.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                          study.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' : 
+                          study.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-blue-100 text-blue-800'
                         }`}>
                           {study.status.charAt(0).toUpperCase() + study.status.slice(1)}
                         </span>
-                        <button 
-                          onClick={() => handleRemoveStudy(study.id)}
-                          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                          title="Remove study"
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering the parent onClick
+                            handleRemoveStudy(study.id);
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                         <ChevronRight className="h-5 w-5 text-gray-400" />
                       </div>
@@ -243,18 +245,15 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
                 ) : (
                   <div className="text-center py-10 bg-gray-50 rounded-lg">
                     <Brain className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No studies yet</h3>
-                    <p className="mt-1 text-sm text-gray-500">Get started by adding a new study for this patient.</p>
-                    <div className="mt-6">
-                      <button
-                        type="button"
-                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                        onClick={() => setIsNewStudyModalOpen(true)}
-                      >
-                        <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                        New Study
-                      </button>
-                    </div>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No studies available</h3>
+                    <p className="mt-1 text-sm text-gray-500">Get started by adding a new study.</p>
+                    <button
+                      onClick={() => setIsNewStudyModalOpen(true)}
+                      className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                      Add New Study
+                    </button>
                   </div>
                 )}
               </div>
