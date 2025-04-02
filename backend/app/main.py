@@ -17,6 +17,9 @@ from pydantic import BaseModel
 # Import the updated Grad-CAM utilities
 from .utils import generate_gradcam, encode_image, deprocess_image
 
+# Import the patient routes
+from .patient_routes import router as patient_router
+
 app = FastAPI()
 
 # Configure CORS
@@ -27,6 +30,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include the patient router
+app.include_router(patient_router)
 
 # Load the model
 model = tf.keras.models.load_model('app/models/Bmodel_v2.keras')

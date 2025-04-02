@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 // Define types
 export interface Study {
@@ -31,148 +31,273 @@ export interface Patient {
   studies: Study[];
 }
 
-// Initial mock data
-const initialPatients: Patient[] = [
-  {
-    id: '1',
-    name: 'Sarah Thompson',
-    age: 45,
-    gender: 'Female',
-    lastVisit: '2024-02-28',
-    dateOfBirth: '1979-03-15',
-    phone: '(555) 123-4567',
-    email: 'sarah@example.com',
-    address: '123 Main St, Anytown, USA',
-    insurance: 'Healthcare Plus',
-    policyNumber: 'HP123456789',
-    emergencyContact: 'John Thompson (Husband) - (555) 987-6543',
-    medicalHistory: ['Hypertension - Diagnosed 2020', 'Migraine - Ongoing'],
-    medications: ['Lisinopril 10mg daily', 'Sumatriptan as needed'],
-    allergies: ['Penicillin'],
-    status: 'scheduled',
-    condition: 'Follow-up MRI',
-    studies: [
-      {
-        id: '1',
-        date: '2024-03-10',
-        type: 'MRI Brain',
-        status: 'completed',
-        findings: 'Normal study',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1583911860205-72f8ac8ddcbe?auto=format&fit=crop&q=80&w=200'
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Michael Chen',
-    age: 62,
-    gender: 'Male',
-    lastVisit: '2024-02-27',
-    dateOfBirth: '1962-06-10',
-    phone: '(555) 234-5678',
-    email: 'michael@example.com',
-    address: '456 Oak St, Anytown, USA',
-    insurance: 'MediCare',
-    policyNumber: 'MC987654321',
-    emergencyContact: 'Lisa Chen (Daughter) - (555) 876-5432',
-    medicalHistory: ['Type 2 Diabetes - Diagnosed 2015', 'Hypertension - Diagnosed 2018'],
-    medications: ['Metformin 1000mg twice daily', 'Amlodipine 5mg daily'],
-    allergies: ['Sulfa drugs'],
-    status: 'completed',
-    condition: 'Post-treatment Assessment',
-    studies: [
-      {
-        id: '2',
-        date: '2024-02-15',
-        type: 'MRI Brain with contrast',
-        status: 'completed',
-        findings: 'Small lesion detected',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?auto=format&fit=crop&q=80&w=200'
-      }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Emily Rodriguez',
-    age: 35,
-    gender: 'Female',
-    lastVisit: '2024-02-26',
-    dateOfBirth: '1989-11-23',
-    phone: '(555) 345-6789',
-    email: 'emily@example.com',
-    address: '789 Pine St, Anytown, USA',
-    insurance: 'BlueShield',
-    policyNumber: 'BS456789123',
-    emergencyContact: 'Roberto Rodriguez (Brother) - (555) 765-4321',
-    medicalHistory: ['Anxiety - Ongoing'],
-    medications: ['Sertraline 50mg daily'],
-    allergies: [],
-    status: 'in-progress',
-    condition: 'Initial Screening',
-    studies: []
-  }
-];
+// Patient form data interface
+export interface PatientFormData {
+  fullName: string;
+  dateOfBirth: string;
+  gender: string;
+  phone: string;
+  email: string;
+  address: string;
+  insuranceProvider: string;
+  policyNumber: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+}
 
 // Context type
 interface PatientContextType {
   patients: Patient[];
   getPatient: (id: string) => Patient | undefined;
-  addStudy: (patientId: string, study: Omit<Study, 'id'>) => void;
-  removeStudy: (patientId: string, studyId: string) => void;
+  addStudy: (patientId: string, study: Omit<Study, 'id'>) => Promise<void>;
+  removeStudy: (patientId: string, studyId: string) => Promise<void>;
+  addPatient: (patientData: PatientFormData) => Promise<void>;
+  isLoading: boolean;
+  error: string | null;
 }
+
+// API URL
+const API_BASE_URL = 'http://localhost:8000';
 
 // Create context
 const PatientContext = createContext<PatientContextType | undefined>(undefined);
 
 // Provider component
 export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [patients, setPatients] = useState<Patient[]>(initialPatients);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Add this function to transform the API response to match your frontend model
+  const transformPatient = (apiPatient: any): Patient => {
+    return {
+      id: apiPatient.id,
+      name: apiPatient.name,
+      age: apiPatient.age,
+      gender: apiPatient.gender,
+      lastVisit: apiPatient.last_visit,
+      dateOfBirth: apiPatient.date_of_birth,
+      phone: apiPatient.phone,
+      email: apiPatient.email,
+      address: apiPatient.address,
+      insurance: apiPatient.insurance,
+      policyNumber: apiPatient.policy_number,
+      emergencyContact: apiPatient.emergency_contact,
+      medicalHistory: apiPatient.medical_history || [],
+      medications: apiPatient.medications || [],
+      allergies: apiPatient.allergies || [],
+      status: apiPatient.status as 'scheduled' | 'in-progress' | 'completed',
+      condition: apiPatient.condition,
+      studies: (apiPatient.studies || []).map((apiStudy: any) => ({
+        id: apiStudy.id,
+        date: apiStudy.date,
+        type: apiStudy.type,
+        status: apiStudy.status as 'scheduled' | 'in-progress' | 'completed',
+        findings: apiStudy.findings,
+        thumbnailUrl: apiStudy.thumbnail_url
+      }))
+    };
+  };
+
+  // Fetch patients on component mount
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`${API_BASE_URL}/patients`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch patients');
+        }
+        
+        const data = await response.json();
+        const transformedPatients = data.map(transformPatient);
+        setPatients(transformedPatients);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching patients:', err);
+        setError('Failed to load patients. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPatients();
+  }, []);
 
   const getPatient = (id: string) => {
     return patients.find(patient => patient.id === id);
   };
 
-  const addStudy = (patientId: string, study: Omit<Study, 'id'>) => {
-    setPatients(prevPatients => {
-      return prevPatients.map(patient => {
-        if (patient.id === patientId) {
-          // Generate a unique ID for the new study
-          const newStudyId = `study-${Date.now()}`;
-          
-          // Add the new study to this patient
-          return {
-            ...patient,
-            studies: [
-              ...patient.studies,
-              {
-                ...study,
-                id: newStudyId
-              }
-            ]
-          };
-        }
-        return patient;
+  const addStudy = async (patientId: string, study: Omit<Study, 'id'>) => {
+    try {
+      setIsLoading(true);
+      
+      // Transform from camelCase to snake_case for API
+      const apiStudy = {
+        type: study.type,
+        date: study.date,
+        status: study.status,
+        findings: study.findings,
+        thumbnail_url: study.thumbnailUrl
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/patients/${patientId}/studies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiStudy),
       });
-    });
+
+      if (!response.ok) {
+        throw new Error('Failed to add study');
+      }
+
+      const newApiStudy = await response.json();
+      
+      // Transform the returned study to frontend format
+      const newStudy = {
+        id: newApiStudy.id,
+        date: newApiStudy.date,
+        type: newApiStudy.type,
+        status: newApiStudy.status as 'scheduled' | 'in-progress' | 'completed',
+        findings: newApiStudy.findings,
+        thumbnailUrl: newApiStudy.thumbnail_url
+      };
+      
+      // Update local state
+      setPatients(prevPatients => {
+        return prevPatients.map(patient => {
+          if (patient.id === patientId) {
+            return {
+              ...patient,
+              studies: [...patient.studies, newStudy]
+            };
+          }
+          return patient;
+        });
+      });
+      
+      setError(null);
+    } catch (err) {
+      console.error('Error adding study:', err);
+      setError('Failed to add study. Please try again later.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const removeStudy = (patientId: string, studyId: string) => {
-    setPatients(prevPatients => {
-      return prevPatients.map(patient => {
-        if (patient.id === patientId) {
-          // Remove the specified study
-          return {
-            ...patient,
-            studies: patient.studies.filter(study => study.id !== studyId)
-          };
-        }
-        return patient;
+  const removeStudy = async (patientId: string, studyId: string) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/patients/${patientId}/studies/${studyId}`, {
+        method: 'DELETE',
       });
-    });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove study');
+      }
+
+      // Update local state
+      setPatients(prevPatients => {
+        return prevPatients.map(patient => {
+          if (patient.id === patientId) {
+            return {
+              ...patient,
+              studies: patient.studies.filter(study => study.id !== studyId)
+            };
+          }
+          return patient;
+        });
+      });
+      
+      setError(null);
+    } catch (err) {
+      console.error('Error removing study:', err);
+      setError('Failed to remove study. Please try again later.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addPatient = async (patientData: PatientFormData) => {
+    try {
+      setIsLoading(true);
+      
+      // Calculate age based on date of birth
+      const birthDate = new Date(patientData.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      // Format emergency contact
+      const emergencyContact = `${patientData.emergencyContactName} - ${patientData.emergencyContactPhone}`;
+      
+      // Create a new patient object for the API (snake_case)
+      const apiPatient = {
+        name: patientData.fullName,
+        age,
+        gender: patientData.gender.charAt(0).toUpperCase() + patientData.gender.slice(1),
+        last_visit: today.toISOString().split('T')[0], // Today's date
+        date_of_birth: patientData.dateOfBirth,
+        phone: patientData.phone,
+        email: patientData.email,
+        address: patientData.address,
+        insurance: patientData.insuranceProvider,
+        policy_number: patientData.policyNumber,
+        emergency_contact: emergencyContact,
+        medical_history: [],
+        medications: [],
+        allergies: [],
+        status: 'scheduled',
+        condition: 'Initial Consultation'
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/patients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiPatient),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add patient');
+      }
+
+      const createdApiPatient = await response.json();
+      
+      // Transform the API response to match frontend model
+      const createdPatient = transformPatient(createdApiPatient);
+      
+      // Update local state
+      setPatients(prevPatients => [...prevPatients, createdPatient]);
+      setError(null);
+    } catch (err) {
+      console.error('Error adding patient:', err);
+      setError('Failed to add patient. Please try again later.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <PatientContext.Provider value={{ patients, getPatient, addStudy, removeStudy }}>
+    <PatientContext.Provider value={{ 
+      patients, 
+      getPatient, 
+      addStudy, 
+      removeStudy, 
+      addPatient,
+      isLoading,
+      error
+    }}>
       {children}
     </PatientContext.Provider>
   );
