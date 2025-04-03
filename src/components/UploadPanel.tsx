@@ -69,8 +69,11 @@ export default function UploadPanel() {
         
         if (result.success) {
           updateAnalysis({
-            ...result,
-            imageUrl: imageUrl
+            prediction: result.prediction,
+            confidenceScores: result.confidence_scores,
+            gradcam: result.gradcam,
+            imageUrl: imageUrl,
+            success: result.success
           });
           // Add file to context after successful upload
           addUploadedFile(selectedFiles[0]);

@@ -1,7 +1,7 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from .database import SessionLocal, Patient, Study
 
@@ -96,7 +96,7 @@ def get_patients(db: Session = Depends(get_db)):
                     "status": study.status,
                     "findings": study.findings,
                     "thumbnail_url": study.thumbnail_url,
-                    # Don't try to access analysis_data
+                    "analysis_data": json.loads(study.analysis_data) if study.analysis_data else None
                 }
                 patient_dict["studies"].append(study_dict)
         except Exception as e:
@@ -142,7 +142,8 @@ def get_patient(patient_id: str, db: Session = Depends(get_db)):
             "type": study.type,
             "status": study.status,
             "findings": study.findings,
-            "thumbnail_url": study.thumbnail_url
+            "thumbnail_url": study.thumbnail_url,
+            "analysis_data": json.loads(study.analysis_data) if study.analysis_data else None
         })
         
     return patient_data
@@ -200,7 +201,8 @@ def add_study(patient_id: str, study: StudyCreate, db: Session = Depends(get_db)
         type=study.type,
         status=study.status,
         findings=study.findings,
-        thumbnail_url=study.thumbnail_url
+        thumbnail_url=study.thumbnail_url,
+        analysis_data=None  # Initialize with None
     )
     
     db.add(db_study)
@@ -213,7 +215,8 @@ def add_study(patient_id: str, study: StudyCreate, db: Session = Depends(get_db)
         "type": db_study.type,
         "status": db_study.status,
         "findings": db_study.findings,
-        "thumbnail_url": db_study.thumbnail_url
+        "thumbnail_url": db_study.thumbnail_url,
+        "analysis_data": None  # Include in response
     }
 
 @router.delete("/{patient_id}/studies/{study_id}")
@@ -244,4 +247,40 @@ def delete_patient(patient_id: str, db: Session = Depends(get_db)):
     db.delete(patient)
     db.commit()
     
-    return {"message": "Patient deleted successfully"} 
+    return {"message": "Patient deleted successfully"}
+
+@router.put("/{patient_id}/studies/{study_id}/analysis", response_model=dict)
+def update_study_analysis(
+    patient_id: str, 
+    study_id: str, 
+    analysis_data: Dict[str, Any] = Body(...), 
+    db: Session = Depends(get_db)
+):
+    # Check if patient exists
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Find the study
+    study = db.query(Study).filter(Study.id == study_id, Study.patient_id == patient_id).first()
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    # Log the analysis data being saved
+    print(f"Saving analysis data for study {study_id}: {analysis_data}")
+    
+    # Update the study with analysis data
+    study.analysis_data = json.dumps(analysis_data)
+    
+    # Update status to completed if it was in-progress
+    if study.status == "in-progress":
+        study.status = "completed"
+    
+    db.commit()
+    db.refresh(study)
+    
+    return {
+        "id": study.id,
+        "message": "Analysis data updated successfully",
+        "status": study.status
+    }
