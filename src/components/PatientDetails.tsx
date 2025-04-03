@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronLeft, Calendar, Clock, FileText, Plus, UploadCloud, Brain, ChevronRight, Trash2 } from 'lucide-react';
 import { usePatients } from '../context/PatientContext';
 import NewStudyModal from './NewStudyModal';
+import { useAnalysis } from '../context/AnalysisContext';
 
 interface PatientDetailsProps {
   patientId: string;
@@ -15,6 +16,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
   
   // Get patient data from context
   const { getPatient, addStudy, removeStudy } = usePatients();
+  const { setCurrentStudy, updateAnalysisState } = useAnalysis();
   const patient = getPatient(patientId);
 
   // Handle if patient not found
@@ -46,6 +48,46 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
   const handleRemoveStudy = (studyId: string) => {
     if (confirm("Are you sure you want to remove this study?")) {
       removeStudy(patientId, studyId);
+    }
+  };
+
+  const handleStudySelect = (studyId: string) => {
+    const study = patient.studies.find(s => s.id === studyId);
+    if (study) {
+      console.log(`Setting current study: Patient ID ${patientId}, Study ID ${studyId}`);
+      
+      // Create an update object for the analysis state
+      const analysisUpdate: any = {};
+      
+      // First, check if there is analysis data saved with the study
+      if (study.analysisData) {
+        console.log('Loading saved analysis data:', study.analysisData);
+        
+        // Use the image URL from analysis data if available, otherwise use the thumbnail
+        analysisUpdate.imageUrl = study.analysisData.imageUrl || study.thumbnailUrl || null;
+        analysisUpdate.prediction = study.analysisData.prediction || null;
+        analysisUpdate.confidenceScores = study.analysisData.confidenceScores || {};
+        analysisUpdate.gradcamUrl = study.analysisData.gradcamUrl || null;
+        analysisUpdate.uploadedFiles = [];
+      } 
+      else {
+        console.log('No analysis data found for this study');
+        // Use the thumbnail as the image if no analysis data
+        analysisUpdate.imageUrl = study.thumbnailUrl || null;
+        analysisUpdate.prediction = null;
+        analysisUpdate.confidenceScores = {};
+        analysisUpdate.gradcamUrl = null;
+        analysisUpdate.uploadedFiles = [];
+      }
+      
+      // Update everything at once to avoid state synchronization issues
+      updateAnalysisState(analysisUpdate);
+      
+      // Set the current study context
+      setCurrentStudy(patientId, studyId);
+      
+      // Navigate to study view
+      onStudySelect(studyId);
     }
   };
 
@@ -203,7 +245,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
                     >
                       <div 
                         className="flex items-center space-x-4 flex-1 cursor-pointer"
-                        onClick={() => onStudySelect(study.id)}
+                        onClick={() => handleStudySelect(study.id)}
                       >
                         <div className="h-20 w-20 rounded-lg overflow-hidden bg-gray-200">
                           <img
@@ -309,6 +351,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
         isOpen={isNewStudyModalOpen}
         onClose={() => setIsNewStudyModalOpen(false)}
         onSave={handleAddStudy}
+        patientName={patient.name}
       />
     </div>
   );

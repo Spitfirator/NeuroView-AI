@@ -6,19 +6,40 @@ import AnalysisResults from './components/AnalysisResults';
 import UploadPanel from './components/UploadPanel';
 import PatientList from './components/PatientList';
 import PatientDetails from './components/PatientDetails';
-import { AnalysisProvider } from './context/AnalysisContext';
+import { AnalysisProvider, useAnalysis } from './context/AnalysisContext';
 import { PatientProvider } from './context/PatientContext';
 import GradCAMViewer from './components/GradCAMViewer';
-import { useAnalysis } from './context/AnalysisContext';
 import AIAssistant from './components/AIAssistant';
 
+// This component uses useAnalysis, so it must be rendered inside AnalysisProvider
 function MainContent() {
   const { analysis } = useAnalysis();
-  const hasAnalysis = analysis.imageUrl != null;
+  const hasImage = analysis.imageUrl != null;
+  const hasAnalysisResults = analysis.prediction != null;
 
-  if (!hasAnalysis) {
+  if (!hasImage) {
     return (
       <div className="max-w-md mx-auto">
+        <UploadPanel />
+      </div>
+    );
+  }
+
+  if (!hasAnalysisResults) {
+    return (
+      <div className="max-w-md mx-auto">
+        <div className="card p-4 mb-6">
+          <div className="aspect-square w-full">
+            <img
+              src={analysis.imageUrl}
+              alt="Study Thumbnail"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <p className="text-center text-gray-500 mt-4">
+            This study has no analysis data yet. Upload an MRI scan to begin analysis.
+          </p>
+        </div>
         <UploadPanel />
       </div>
     );
@@ -44,6 +65,41 @@ function MainContent() {
   );
 }
 
+// Create a separate component for patient-related content
+function PatientContent({ selectedView, selectedPatientId, handleBackToPatients, handlePatientSelect, handleStudySelect }) {
+  return (
+    <>
+      {selectedView === 'patients' && (
+        <>
+          {selectedPatientId === null ? (
+            <PatientList onPatientSelect={handlePatientSelect} />
+          ) : (
+            <PatientDetails 
+              patientId={selectedPatientId}
+              onBack={handleBackToPatients}
+              onStudySelect={handleStudySelect}
+            />
+          )}
+        </>
+      )}
+      
+      {selectedView === 'calendar' && (
+        <div className="py-12 text-center">
+          <h2 className="text-2xl font-display font-semibold text-gray-900">Calendar View</h2>
+          <p className="mt-2 text-gray-500">Scheduling and appointments would appear here.</p>
+        </div>
+      )}
+      
+      {selectedView === 'studies' && (
+        <div className="py-12 text-center">
+          <h2 className="text-2xl font-display font-semibold text-gray-900">Studies Database</h2>
+          <p className="mt-2 text-gray-500">Research studies and case collections would appear here.</p>
+        </div>
+      )}
+    </>
+  );
+}
+
 function App() {
   const [selectedView, setSelectedView] = useState<'patients' | 'analysis' | 'calendar' | 'studies'>('patients');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -59,17 +115,15 @@ function App() {
     setSelectedPatientId(null);
   };
   
-  // Handle study selection
-  const handleStudySelect = (studyId: string) => {
-    console.log(`Selected study: ${studyId}`);
-    // Transition to analysis view with the selected study
+  // This function will be used inside AnalysisProvider's scope
+  const handleStudySelectWithAnalysis = (studyId: string) => {
+    console.log(`Selected study: ${studyId} for patient: ${selectedPatientId}`);
     setSelectedView('analysis');
-    // In a real app, you would load the study data here
   };
 
   return (
-    <AnalysisProvider>
-      <PatientProvider>
+    <PatientProvider>
+      <AnalysisProvider>
         <div className="min-h-screen bg-slate-50">
           <Header />
           <Sidebar selectedView={selectedView} onViewChange={setSelectedView} />
@@ -78,38 +132,18 @@ function App() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               {selectedView === 'analysis' && <MainContent />}
               
-              {selectedView === 'patients' && (
-                <>
-                  {selectedPatientId === null ? (
-                    <PatientList onPatientSelect={handlePatientSelect} />
-                  ) : (
-                    <PatientDetails 
-                      patientId={selectedPatientId}
-                      onBack={handleBackToPatients}
-                      onStudySelect={handleStudySelect}
-                    />
-                  )}
-                </>
-              )}
-              
-              {selectedView === 'calendar' && (
-                <div className="py-12 text-center">
-                  <h2 className="text-2xl font-display font-semibold text-gray-900">Calendar View</h2>
-                  <p className="mt-2 text-gray-500">Scheduling and appointments would appear here.</p>
-                </div>
-              )}
-              
-              {selectedView === 'studies' && (
-                <div className="py-12 text-center">
-                  <h2 className="text-2xl font-display font-semibold text-gray-900">Studies Database</h2>
-                  <p className="mt-2 text-gray-500">Research studies and case collections would appear here.</p>
-                </div>
-              )}
+              <PatientContent 
+                selectedView={selectedView}
+                selectedPatientId={selectedPatientId}
+                handleBackToPatients={handleBackToPatients}
+                handlePatientSelect={handlePatientSelect}
+                handleStudySelect={handleStudySelectWithAnalysis}
+              />
             </div>
           </main>
         </div>
-      </PatientProvider>
-    </AnalysisProvider>
+      </AnalysisProvider>
+    </PatientProvider>
   );
 }
 

@@ -8,6 +8,7 @@ export interface Study {
   status: 'scheduled' | 'in-progress' | 'completed';
   findings: string;
   thumbnailUrl: string;
+  analysisData?: any;
 }
 
 export interface Patient {
@@ -52,6 +53,7 @@ interface PatientContextType {
   addStudy: (patientId: string, study: Omit<Study, 'id'>) => Promise<void>;
   removeStudy: (patientId: string, studyId: string) => Promise<void>;
   addPatient: (patientData: PatientFormData) => Promise<void>;
+  updateStudyAnalysis: (patientId: string, studyId: string, analysisData: any) => Promise<any>;
   isLoading: boolean;
   error: string | null;
 }
@@ -94,7 +96,8 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         type: apiStudy.type,
         status: apiStudy.status as 'scheduled' | 'in-progress' | 'completed',
         findings: apiStudy.findings,
-        thumbnailUrl: apiStudy.thumbnail_url
+        thumbnailUrl: apiStudy.thumbnail_url,
+        analysisData: apiStudy.analysis_data
       }))
     };
   };
@@ -111,7 +114,12 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         }
         
         const data = await response.json();
+        console.log('API returned patients:', data);
+        
+        // Transform the data to match our frontend model
         const transformedPatients = data.map(transformPatient);
+        console.log('Transformed patients:', transformedPatients);
+        
         setPatients(transformedPatients);
         setError(null);
       } catch (err) {
@@ -288,6 +296,64 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
+  const updateStudyAnalysis = async (patientId: string, studyId: string, analysisData: any) => {
+    try {
+      setIsLoading(true);
+      
+      console.log('Saving analysis data:', analysisData);  // Debug log
+      
+      const response = await fetch(`${API_BASE_URL}/patients/${patientId}/studies/${studyId}/analysis`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(analysisData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update study analysis');
+      }
+
+      const result = await response.json();
+      
+      // Update local state
+      setPatients(prevPatients => {
+        return prevPatients.map(patient => {
+          if (patient.id === patientId) {
+            return {
+              ...patient,
+              studies: patient.studies.map(study => {
+                if (study.id === studyId) {
+                  return {
+                    ...study,
+                    status: result.status as 'scheduled' | 'in-progress' | 'completed',
+                    analysisData: {
+                      prediction: analysisData.prediction,
+                      confidenceScores: analysisData.confidenceScores || {},
+                      gradcamUrl: analysisData.gradcamUrl || '',
+                      timestamp: analysisData.timestamp
+                    }
+                  };
+                }
+                return study;
+              })
+            };
+          }
+          return patient;
+        });
+      });
+      
+      setError(null);
+      return result;
+    } catch (err) {
+      console.error('Error updating study analysis:', err);
+      setError('Failed to update study analysis. Please try again later.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <PatientContext.Provider value={{ 
       patients, 
@@ -295,6 +361,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       addStudy, 
       removeStudy, 
       addPatient,
+      updateStudyAnalysis,
       isLoading,
       error
     }}>

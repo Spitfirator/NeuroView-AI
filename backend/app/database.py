@@ -48,7 +48,7 @@ class Study(Base):
     status = Column(String)
     findings = Column(Text)
     thumbnail_url = Column(String)
-    analysis_data = Column(Text)
+    analysis_data = Column(Text)  # This will store the analysis results as JSON
     
     # Relationship with patient
     patient = relationship("Patient", back_populates="studies")
