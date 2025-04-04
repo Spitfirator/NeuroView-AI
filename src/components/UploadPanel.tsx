@@ -49,8 +49,8 @@ export default function UploadPanel() {
       const formData = new FormData();
       formData.append('file', selectedFiles[0]);
 
-      // Create URL for the uploaded image
-      const imageUrl = URL.createObjectURL(selectedFiles[0]);
+      // Convert the image to base64 for storage
+      const base64Image = await convertFileToBase64(selectedFiles[0]);
 
       try {
         const response = await fetch('http://localhost:8000/predict', {
@@ -72,7 +72,8 @@ export default function UploadPanel() {
             prediction: result.prediction,
             confidenceScores: result.confidence_scores,
             gradcam: result.gradcam,
-            imageUrl: imageUrl,
+            imageUrl: base64Image,
+            originalImageBase64: base64Image,
             success: result.success
           });
           // Add file to context after successful upload
@@ -88,6 +89,16 @@ export default function UploadPanel() {
         setIsUploading(false);
       }
     }
+  };
+
+  // Helper function to convert File to base64
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   };
 
   const removeFile = (indexToRemove: number) => {

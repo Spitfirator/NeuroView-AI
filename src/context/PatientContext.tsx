@@ -90,15 +90,32 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       allergies: apiPatient.allergies || [],
       status: apiPatient.status as 'scheduled' | 'in-progress' | 'completed',
       condition: apiPatient.condition,
-      studies: (apiPatient.studies || []).map((apiStudy: any) => ({
-        id: apiStudy.id,
-        date: apiStudy.date,
-        type: apiStudy.type,
-        status: apiStudy.status as 'scheduled' | 'in-progress' | 'completed',
-        findings: apiStudy.findings,
-        thumbnailUrl: apiStudy.thumbnail_url,
-        analysisData: apiStudy.analysis_data
-      }))
+      studies: (apiPatient.studies || []).map((apiStudy: any) => {
+        // Parse analysis_data if it exists
+        let analysisData = null;
+        if (apiStudy.analysis_data) {
+          // Make sure we're dealing with an object, not a string
+          if (typeof apiStudy.analysis_data === 'string') {
+            try {
+              analysisData = JSON.parse(apiStudy.analysis_data);
+            } catch (e) {
+              console.error('Error parsing analysis data:', e);
+            }
+          } else {
+            analysisData = apiStudy.analysis_data;
+          }
+        }
+
+        return {
+          id: apiStudy.id,
+          date: apiStudy.date,
+          type: apiStudy.type,
+          status: apiStudy.status as 'scheduled' | 'in-progress' | 'completed',
+          findings: apiStudy.findings,
+          thumbnailUrl: apiStudy.thumbnail_url,
+          analysisData: analysisData
+        };
+      })
     };
   };
 
@@ -300,14 +317,27 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     try {
       setIsLoading(true);
       
-      console.log('Saving analysis data:', analysisData);  // Debug log
+      console.log('Saving analysis data to backend:', analysisData);
+      
+      // Create the data to be saved - include both the original image and gradcam data
+      const dataToSave = {
+        prediction: analysisData.prediction,
+        confidenceScores: analysisData.confidenceScores,
+        gradcam: analysisData.gradcam,
+        // Use the correct property name that matches what's in analysisData
+        originalImage: analysisData.originalImage || null,
+        // Remove this if we're no longer using blob URLs
+        // imageUrl: analysisData.imageUrl,
+        uploadedFileNames: analysisData.uploadedFileNames || [],
+        timestamp: analysisData.timestamp || new Date().toISOString(),
+      };
       
       const response = await fetch(`${API_BASE_URL}/patients/${patientId}/studies/${studyId}/analysis`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(analysisData),
+        body: JSON.stringify(dataToSave),
       });
 
       if (!response.ok) {
@@ -315,6 +345,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
 
       const result = await response.json();
+      console.log('Backend response:', result);
       
       // Update local state
       setPatients(prevPatients => {
@@ -324,15 +355,11 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
               ...patient,
               studies: patient.studies.map(study => {
                 if (study.id === studyId) {
+                  console.log('Updating study with new analysis data');
                   return {
                     ...study,
                     status: result.status as 'scheduled' | 'in-progress' | 'completed',
-                    analysisData: {
-                      prediction: analysisData.prediction,
-                      confidenceScores: analysisData.confidenceScores || {},
-                      gradcamUrl: analysisData.gradcamUrl || '',
-                      timestamp: analysisData.timestamp
-                    }
+                    analysisData: dataToSave  // Save the modified data with original image
                   };
                 }
                 return study;
