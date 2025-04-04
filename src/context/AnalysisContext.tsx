@@ -5,11 +5,12 @@ interface AnalysisState {
   prediction: string | null;
   confidenceScores: Record<string, number>;
   imageUrl: string | null;
-  gradcam: {
-    heatmap: string;
-    superimposed: string;
-  } | null;
+  originalImageBase64: string | null;
+  gradcamUrl: string | null;
+  gradcam: any;
   uploadedFiles: File[];
+  uploadedFileNames?: string[];
+  timestamp?: string;
 }
 
 interface AnalysisContextType {
@@ -19,6 +20,8 @@ interface AnalysisContextType {
     confidenceScores: Record<string, number>;
     gradcamUrl: string | null;
     uploadedFiles: File[];
+    uploadedFileNames?: string[];
+    timestamp?: string;
   };
   currentPatientId: string | null;
   currentStudyId: string | null;
@@ -40,10 +43,14 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
   
   const [analysis, setAnalysis] = useState({
     imageUrl: null as string | null,
+    originalImageBase64: null as string | null,
     prediction: null as string | null,
     confidenceScores: {} as Record<string, number>,
     gradcamUrl: null as string | null,
+    gradcam: null,
     uploadedFiles: [] as File[],
+    uploadedFileNames: [] as string[],
+    timestamp: null as string | null,
   });
   
   const [currentPatientId, setCurrentPatientId] = useState<string | null>(null);
@@ -65,10 +72,14 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
   const resetAnalysis = () => {
     setAnalysis({
       imageUrl: null,
+      originalImageBase64: null,
       prediction: null,
       confidenceScores: {},
       gradcamUrl: null,
+      gradcam: null,
       uploadedFiles: [],
+      uploadedFileNames: [],
+      timestamp: null,
     });
     setCurrentPatientId(null);
     setCurrentStudyId(null);
@@ -96,14 +107,22 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
       };
     }
 
+    // Create a comprehensive analysis data object
     const analysisData = {
       prediction: analysis.prediction,
       confidenceScores: scoresToSave,
+      // Save both gradcam data and URL
+      gradcam: analysis.gradcam,
       gradcamUrl: analysis.gradcamUrl,
-      imageUrl: analysis.imageUrl,
+      // Add the original image base64 data for persistent storage
+      originalImage: analysis.originalImageBase64,
+      // Store filenames of uploaded files for reference
+      uploadedFileNames: analysis.uploadedFiles.map(file => file.name),
+      // Add metadata
       timestamp: new Date().toISOString(),
     };
 
+    console.log('Saving complete analysis data:', analysisData);
     await updateStudyAnalysis(currentPatientId, currentStudyId, analysisData);
     return;
   };

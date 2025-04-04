@@ -6,7 +6,11 @@ import GradCAMViewer from './GradCAMViewer';
 export default function ImageViewer() {
   const { analysis } = useAnalysis();
 
-  if (!analysis.imageUrl) {
+  // Determine which image source to use
+  const imageSrc = analysis.imageUrl || 
+                  (analysis.originalImageBase64 ? analysis.originalImageBase64 : null);
+
+  if (!imageSrc) {
     return null;
   }
 
@@ -15,7 +19,7 @@ export default function ImageViewer() {
       <div className="relative bg-gray-900">
         <div className="aspect-square w-full">
           <img
-            src={analysis.imageUrl}
+            src={imageSrc}
             alt="Brain MRI Scan"
             className="w-full h-full object-contain"
           />

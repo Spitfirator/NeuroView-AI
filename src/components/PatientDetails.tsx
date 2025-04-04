@@ -55,30 +55,50 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
     const study = patient.studies.find(s => s.id === studyId);
     if (study) {
       console.log(`Setting current study: Patient ID ${patientId}, Study ID ${studyId}`);
+      console.log('Found study:', study);
       
       // Create an update object for the analysis state
       const analysisUpdate: any = {};
       
+      // Check for analysis data with either property name
+      const analysisData = study.analysisData || study.analysis_data;
+      
       // First, check if there is analysis data saved with the study
-      if (study.analysisData) {
-        console.log('Loading saved analysis data:', study.analysisData);
+      if (analysisData) {
+        console.log('Loading saved analysis data:', analysisData);
         
-        // Use the image URL from analysis data if available, otherwise use the thumbnail
-        analysisUpdate.imageUrl = study.analysisData.imageUrl || study.thumbnailUrl || null;
-        analysisUpdate.prediction = study.analysisData.prediction || null;
-        analysisUpdate.confidenceScores = study.analysisData.confidenceScores || {};
-        analysisUpdate.gradcamUrl = study.analysisData.gradcamUrl || null;
-        analysisUpdate.uploadedFiles = [];
+        // Restore analysis data fields
+        analysisUpdate.prediction = analysisData.prediction || null;
+        analysisUpdate.confidenceScores = analysisData.confidenceScores || {};
+        
+        // Use the stored base64 image if available, otherwise use the thumbnail
+        analysisUpdate.originalImageBase64 = analysisData.originalImage || null;
+        analysisUpdate.imageUrl = analysisData.originalImage || study.thumbnailUrl || null;
+        
+        // Handle gradcam data
+        analysisUpdate.gradcam = analysisData.gradcam || null;
+        analysisUpdate.gradcamUrl = analysisData.gradcamUrl || null;
+        
+        // Keep track of the uploaded file names
+        analysisUpdate.uploadedFileNames = analysisData.uploadedFileNames || [];
+        analysisUpdate.uploadedFiles = []; // Reset the file objects as we can't recreate them
+        
+        analysisUpdate.timestamp = analysisData.timestamp || null;
       } 
       else {
         console.log('No analysis data found for this study');
-        // Use the thumbnail as the image if no analysis data
+        // Initialize with empty analysis data
         analysisUpdate.imageUrl = study.thumbnailUrl || null;
         analysisUpdate.prediction = null;
         analysisUpdate.confidenceScores = {};
+        analysisUpdate.gradcam = null;
         analysisUpdate.gradcamUrl = null;
         analysisUpdate.uploadedFiles = [];
+        analysisUpdate.uploadedFileNames = [];
+        analysisUpdate.timestamp = null;
       }
+      
+      console.log('Updating analysis state with:', analysisUpdate);
       
       // Update everything at once to avoid state synchronization issues
       updateAnalysisState(analysisUpdate);
