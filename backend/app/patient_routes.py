@@ -20,6 +20,7 @@ class StudyCreate(StudyBase):
 
 class StudyResponse(StudyBase):
     id: str
+    analysis_data: Optional[Dict[str, Any]] = None
 
 class PatientBase(BaseModel):
     name: str
@@ -135,7 +136,9 @@ def get_patient(patient_id: str, db: Session = Depends(get_db)):
         "studies": []
     }
     
-    for study in patient.studies:
+    # Explicitly query for studies to ensure we get all data
+    studies = db.query(Study).filter(Study.patient_id == patient.id).all()
+    for study in studies:
         patient_data["studies"].append({
             "id": study.id,
             "date": study.date,
@@ -283,4 +286,32 @@ def update_study_analysis(
         "id": study.id,
         "message": "Analysis data updated successfully",
         "status": study.status
+    }
+
+@router.get("/{patient_id}/studies/{study_id}", response_model=dict)
+def get_study(
+    patient_id: str, 
+    study_id: str, 
+    db: Session = Depends(get_db)
+):
+    # Check if patient exists
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Find the study
+    study = db.query(Study).filter(Study.id == study_id, Study.patient_id == patient_id).first()
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    # Return the study data, including analysis data if available
+    return {
+        "id": study.id,
+        "patient_id": study.patient_id,
+        "date": study.date,
+        "type": study.type,
+        "status": study.status,
+        "findings": study.findings,
+        "thumbnail_url": study.thumbnail_url,
+        "analysis_data": json.loads(study.analysis_data) if study.analysis_data else None
     }
