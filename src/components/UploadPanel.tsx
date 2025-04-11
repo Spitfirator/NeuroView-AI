@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Upload, FileText, X, Plus, Clock } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
-// API URLs - try both ports to support different development environments
-const API_URLS = ['http://localhost:8000', 'http://localhost:8001'];
+// API URLs - try all ports to support different development environments
+const API_URLS = ['http://localhost:8000', 'http://localhost:8001', 'http://localhost:8002'];
 
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
@@ -18,8 +18,7 @@ const formatFileSize = (bytes: number): string => {
 export default function UploadPanel() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const { analysis, updateAnalysis, addUploadedFile, removeUploadedFile, startProcessingTimer } = useAnalysis();
+  const { analysis, updateAnalysis, addUploadedFile, removeUploadedFile, startProcessingTimer, stopProcessingTimer, updateElapsedTime } = useAnalysis();
 
   // Timer effect to update elapsed time during processing
   useEffect(() => {
@@ -30,12 +29,14 @@ export default function UploadPanel() {
       timerId = window.setInterval(() => {
         const currentTime = Date.now();
         const elapsed = currentTime - analysis.processingStartTime;
-        setElapsedTime(elapsed);
+        // Update the shared elapsed time in the context
+        updateElapsedTime(elapsed);
       }, 100);
     } else if (!isUploading && analysis.processingEndTime) {
       // When upload is complete, show final time
       if (analysis.processingDuration) {
-        setElapsedTime(analysis.processingDuration);
+        // Set the final elapsed time
+        updateElapsedTime(analysis.processingDuration);
       }
       // Clear the interval
       if (timerId) {
@@ -48,7 +49,7 @@ export default function UploadPanel() {
         clearInterval(timerId);
       }
     };
-  }, [isUploading, analysis.processingStartTime, analysis.processingEndTime, analysis.processingDuration]);
+  }, [isUploading, analysis.processingStartTime, analysis.processingEndTime, analysis.processingDuration, updateElapsedTime]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -79,7 +80,9 @@ export default function UploadPanel() {
     // Upload first file for prediction
     if (selectedFiles.length > 0) {
       setIsUploading(true);
-      // Start the processing timer
+      // Reset elapsed time counter in the context
+      updateElapsedTime(0);
+      // Start the processing timer and reset any previous timer state
       startProcessingTimer();
 
       const formData = new FormData();
@@ -123,6 +126,7 @@ export default function UploadPanel() {
         const result = await response.json();
 
         if (result.success) {
+          // Update with new results
           updateAnalysis({
             prediction: result.prediction,
             confidenceScores: result.confidence_scores,
@@ -131,6 +135,9 @@ export default function UploadPanel() {
             originalImageBase64: base64Image,
             success: result.success
           });
+
+          // Stop the timer to calculate the final duration
+          stopProcessingTimer();
           // Add file to context after successful upload
           addUploadedFile(selectedFiles[0]);
         } else {
@@ -182,10 +189,10 @@ export default function UploadPanel() {
               <p className="mt-1 text-sm text-gray-500">
                 {isUploading ? 'Analyzing image...' : 'Drag and drop an MRI scan or click to browse'}
               </p>
-              {isUploading && (
+              {isUploading && analysis.currentElapsedTime !== null && (
                 <div className="mt-2 flex items-center justify-center text-sm text-blue-600">
                   <Clock className="h-4 w-4 mr-1" />
-                  <span>{(elapsedTime / 1000).toFixed(1)}s</span>
+                  <span>{(analysis.currentElapsedTime / 1000).toFixed(1)}s</span>
                 </div>
               )}
             </div>

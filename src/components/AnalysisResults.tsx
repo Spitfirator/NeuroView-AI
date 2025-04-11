@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2, Save, Clock } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 import SimilarCases from './SimilarCases';
@@ -47,15 +47,34 @@ export default function AnalysisResults() {
     }
   };
 
+  // Track the previous prediction
+  const [prevPrediction, setPrevPrediction] = useState<string | null>(null);
+
   useEffect(() => {
     console.log('Analysis state in AnalysisResults:', analysis);
     console.log('Confidence scores:', analysis.confidenceScores);
+    console.log('Processing duration:', analysis.processingDuration);
+    console.log('Current elapsed time:', analysis.currentElapsedTime);
 
     // If we have prediction results but no processing end time, stop the timer
     if (analysis.prediction && !analysis.processingEndTime) {
       stopProcessingTimer();
     }
-  }, [analysis, stopProcessingTimer]);
+
+    // Check if this is a new prediction
+    const isNewPrediction = analysis.prediction && analysis.prediction !== prevPrediction;
+
+    if (isNewPrediction) {
+      console.log('New prediction detected:', analysis.prediction);
+      console.log('Previous prediction was:', prevPrediction);
+      setPrevPrediction(analysis.prediction);
+
+      // Ensure the timer is stopped for the new prediction
+      if (!analysis.processingEndTime) {
+        stopProcessingTimer();
+      }
+    }
+  }, [analysis, stopProcessingTimer, prevPrediction]);
 
   if (!analysis.prediction) {
     return null;
@@ -105,10 +124,13 @@ export default function AnalysisResults() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-gray-500">Tumor Classification</h3>
               <div className="flex items-center">
-                {analysis.processingDuration !== null && (
+                {analysis.currentElapsedTime !== null && (
                   <div className="mr-4 text-sm text-gray-600 flex items-center">
                     <Clock className="h-4 w-4 mr-1" />
-                    {(analysis.processingDuration / 1000).toFixed(2)}s
+                    <span title={`Processing started at: ${new Date(analysis.processingStartTime || 0).toLocaleTimeString()}
+${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.processingEndTime).toLocaleTimeString()}` : 'Processing in progress...'}`}>
+                      {(analysis.currentElapsedTime / 1000).toFixed(2)}s
+                    </span>
                   </div>
                 )}
                 <button className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center">
