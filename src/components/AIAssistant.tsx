@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { MessageSquare, Send, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
-// API URLs - try both ports to support different development environments
-const API_URLS = ['http://localhost:8000', 'http://localhost:8001'];
+// API URLs - try all ports to support different development environments
+const API_URLS = ['http://localhost:8000', 'http://localhost:8001', 'http://localhost:8002'];
 
 interface Message {
   role: 'assistant' | 'user' | 'system';

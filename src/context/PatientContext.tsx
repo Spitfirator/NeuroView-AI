@@ -59,7 +59,7 @@ interface PatientContextType {
 }
 
 // API URLs - try both ports to support different development environments
-const API_URLS = ['http://localhost:8000', 'http://localhost:8001'];
+const API_URLS = ['http://localhost:8000', 'http://localhost:8001', 'http://localhost:8002'];
 let currentApiUrlIndex = 0;
 let API_BASE_URL = API_URLS[currentApiUrlIndex];
 
@@ -429,6 +429,11 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         // imageUrl: analysisData.imageUrl,
         uploadedFileNames: analysisData.uploadedFileNames || [],
         timestamp: analysisData.timestamp || new Date().toISOString(),
+        // Save processing time information
+        processingStartTime: analysisData.processingStartTime || null,
+        processingEndTime: analysisData.processingEndTime || null,
+        processingDuration: analysisData.processingDuration || null,
+        currentElapsedTime: analysisData.currentElapsedTime || analysisData.processingDuration || null,
       };
 
       let response;

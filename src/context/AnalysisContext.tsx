@@ -14,6 +14,7 @@ interface AnalysisState {
   processingStartTime?: number;
   processingEndTime?: number;
   processingDuration?: number;
+  currentElapsedTime?: number; // Live elapsed time for synchronizing components
 }
 
 interface AnalysisContextType {
@@ -28,6 +29,7 @@ interface AnalysisContextType {
     processingStartTime?: number;
     processingEndTime?: number;
     processingDuration?: number;
+    currentElapsedTime?: number; // Live elapsed time for synchronizing components
   };
   currentPatientId: string | null;
   currentStudyId: string | null;
@@ -42,6 +44,7 @@ interface AnalysisContextType {
   updateAnalysisState: (data: Partial<typeof analysis>) => void;
   startProcessingTimer: () => number;
   stopProcessingTimer: () => void;
+  updateElapsedTime: (elapsed: number) => void;
 }
 
 const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined);
@@ -62,6 +65,7 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
     processingStartTime: null as number | null,
     processingEndTime: null as number | null,
     processingDuration: null as number | null,
+    currentElapsedTime: null as number | null,
   });
 
   const [currentPatientId, setCurrentPatientId] = useState<string | null>(null);
@@ -94,6 +98,7 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
       processingStartTime: null,
       processingEndTime: null,
       processingDuration: null,
+      currentElapsedTime: null,
     });
     setCurrentPatientId(null);
     setCurrentStudyId(null);
@@ -134,6 +139,11 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
       uploadedFileNames: analysis.uploadedFiles.map(file => file.name),
       // Add metadata
       timestamp: new Date().toISOString(),
+      // Save processing time information
+      processingStartTime: analysis.processingStartTime,
+      processingEndTime: analysis.processingEndTime,
+      processingDuration: analysis.processingDuration,
+      currentElapsedTime: analysis.processingDuration || analysis.currentElapsedTime,
     };
 
     console.log('Saving complete analysis data:', analysisData);
@@ -169,21 +179,45 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Start the processing timer
   const startProcessingTimer = () => {
     const startTime = Date.now();
+    console.log('Starting processing timer at:', startTime, 'timestamp:', new Date(startTime).toLocaleTimeString());
+
+    // Force reset all timer-related state
     setAnalysis(prev => ({
       ...prev,
       processingStartTime: startTime,
       processingEndTime: null,
-      processingDuration: null
+      processingDuration: null,
+      currentElapsedTime: 0
     }));
     return startTime;
+  };
+
+  // Update the current elapsed time (for live timer display)
+  const updateElapsedTime = (elapsed: number) => {
+    setAnalysis(prev => ({
+      ...prev,
+      currentElapsedTime: elapsed
+    }));
   };
 
   // Stop the processing timer and calculate duration
   const stopProcessingTimer = () => {
     const endTime = Date.now();
+    console.log('Stopping processing timer at:', endTime, 'timestamp:', new Date(endTime).toLocaleTimeString());
+
     setAnalysis(prev => {
-      const startTime = prev.processingStartTime || endTime;
+      // Only calculate if we have a valid start time
+      if (!prev.processingStartTime) {
+        console.log('No start time found, cannot calculate duration');
+        return prev;
+      }
+
+      const startTime = prev.processingStartTime;
       const duration = endTime - startTime;
+
+      console.log(`Processing took ${duration}ms (${duration/1000}s)`);
+      console.log(`Start: ${new Date(startTime).toLocaleTimeString()}, End: ${new Date(endTime).toLocaleTimeString()}`);
+
       return {
         ...prev,
         processingEndTime: endTime,
@@ -208,7 +242,8 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
         removeUploadedFile,
         updateAnalysisState,
         startProcessingTimer,
-        stopProcessingTimer
+        stopProcessingTimer,
+        updateElapsedTime
       }}
     >
       {children}

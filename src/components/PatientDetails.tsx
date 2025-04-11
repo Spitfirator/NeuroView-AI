@@ -13,7 +13,7 @@ interface PatientDetailsProps {
 export default function PatientDetails({ patientId, onBack, onStudySelect }: PatientDetailsProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'studies' | 'reports'>('overview');
   const [isNewStudyModalOpen, setIsNewStudyModalOpen] = useState(false);
-  
+
   // Get patient data from context
   const { getPatient, addStudy, removeStudy } = usePatients();
   const { setCurrentStudy, updateAnalysisState } = useAnalysis();
@@ -24,7 +24,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
     return (
       <div className="py-12 text-center">
         <h2 className="text-xl font-medium text-gray-900">Patient not found</h2>
-        <button 
+        <button
           onClick={onBack}
           className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
         >
@@ -56,35 +56,44 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
     if (study) {
       console.log(`Setting current study: Patient ID ${patientId}, Study ID ${studyId}`);
       console.log('Found study:', study);
-      
+
       // Create an update object for the analysis state
       const analysisUpdate: any = {};
-      
+
       // Check for analysis data with either property name
       const analysisData = study.analysisData || study.analysis_data;
-      
+
       // First, check if there is analysis data saved with the study
       if (analysisData) {
         console.log('Loading saved analysis data:', analysisData);
-        
+
         // Restore analysis data fields
         analysisUpdate.prediction = analysisData.prediction || null;
         analysisUpdate.confidenceScores = analysisData.confidenceScores || {};
-        
+
         // Use the stored base64 image if available, otherwise use the thumbnail
         analysisUpdate.originalImageBase64 = analysisData.originalImage || null;
         analysisUpdate.imageUrl = analysisData.originalImage || study.thumbnailUrl || null;
-        
+
         // Handle gradcam data
         analysisUpdate.gradcam = analysisData.gradcam || null;
         analysisUpdate.gradcamUrl = analysisData.gradcamUrl || null;
-        
+
         // Keep track of the uploaded file names
         analysisUpdate.uploadedFileNames = analysisData.uploadedFileNames || [];
         analysisUpdate.uploadedFiles = []; // Reset the file objects as we can't recreate them
-        
+
         analysisUpdate.timestamp = analysisData.timestamp || null;
-      } 
+
+        // Restore processing time information if available
+        if (analysisData.processingDuration) {
+          analysisUpdate.processingStartTime = analysisData.processingStartTime || null;
+          analysisUpdate.processingEndTime = analysisData.processingEndTime || null;
+          analysisUpdate.processingDuration = analysisData.processingDuration || null;
+          analysisUpdate.currentElapsedTime = analysisData.currentElapsedTime || analysisData.processingDuration || null;
+          console.log('Restored processing time:', analysisUpdate.processingDuration, 'ms');
+        }
+      }
       else {
         console.log('No analysis data found for this study');
         // Initialize with empty analysis data
@@ -96,16 +105,20 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
         analysisUpdate.uploadedFiles = [];
         analysisUpdate.uploadedFileNames = [];
         analysisUpdate.timestamp = null;
+        analysisUpdate.processingStartTime = null;
+        analysisUpdate.processingEndTime = null;
+        analysisUpdate.processingDuration = null;
+        analysisUpdate.currentElapsedTime = null;
       }
-      
+
       console.log('Updating analysis state with:', analysisUpdate);
-      
+
       // Update everything at once to avoid state synchronization issues
       updateAnalysisState(analysisUpdate);
-      
+
       // Set the current study context
       setCurrentStudy(patientId, studyId);
-      
+
       // Navigate to study view
       onStudySelect(studyId);
     }
@@ -131,7 +144,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
             <Calendar className="h-4 w-4 mr-2" />
             Schedule Visit
           </button>
-          <button 
+          <button
             className="btn"
             onClick={() => setIsNewStudyModalOpen(true)}
           >
@@ -247,7 +260,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium text-gray-900">Recent Studies</h3>
-                <button 
+                <button
                   className="btn"
                   onClick={() => setIsNewStudyModalOpen(true)}
                 >
@@ -263,7 +276,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
                       key={study.id}
                       className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
                     >
-                      <div 
+                      <div
                         className="flex items-center space-x-4 flex-1 cursor-pointer"
                         onClick={() => handleStudySelect(study.id)}
                       >
@@ -285,7 +298,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
                       </div>
                       <div className="flex items-center space-x-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          study.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                          study.status === 'completed' ? 'bg-green-100 text-green-800' :
                           study.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-blue-100 text-blue-800'
                         }`}>
@@ -367,7 +380,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
       </div>
 
       {/* New Study Modal */}
-      <NewStudyModal 
+      <NewStudyModal
         isOpen={isNewStudyModalOpen}
         onClose={() => setIsNewStudyModalOpen(false)}
         onSave={handleAddStudy}
