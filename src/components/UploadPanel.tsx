@@ -1,21 +1,54 @@
-import React, { useState } from 'react';
-import { Upload, FileText, X, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, FileText, X, Plus, Clock } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
+
+// API URLs - try both ports to support different development environments
+const API_URLS = ['http://localhost:8000', 'http://localhost:8001'];
 
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
 export default function UploadPanel() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const { analysis, updateAnalysis, addUploadedFile, removeUploadedFile } = useAnalysis();
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const { analysis, updateAnalysis, addUploadedFile, removeUploadedFile, startProcessingTimer } = useAnalysis();
+
+  // Timer effect to update elapsed time during processing
+  useEffect(() => {
+    let timerId: number | null = null;
+
+    if (isUploading && analysis.processingStartTime) {
+      // Update elapsed time every 100ms
+      timerId = window.setInterval(() => {
+        const currentTime = Date.now();
+        const elapsed = currentTime - analysis.processingStartTime;
+        setElapsedTime(elapsed);
+      }, 100);
+    } else if (!isUploading && analysis.processingEndTime) {
+      // When upload is complete, show final time
+      if (analysis.processingDuration) {
+        setElapsedTime(analysis.processingDuration);
+      }
+      // Clear the interval
+      if (timerId) {
+        clearInterval(timerId);
+      }
+    }
+
+    return () => {
+      if (timerId) {
+        clearInterval(timerId);
+      }
+    };
+  }, [isUploading, analysis.processingStartTime, analysis.processingEndTime, analysis.processingDuration]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -33,7 +66,7 @@ export default function UploadPanel() {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
+
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length > 0) {
       handleFileUpload({ target: { files: droppedFiles } } as any);
@@ -42,10 +75,13 @@ export default function UploadPanel() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
-    
+
     // Upload first file for prediction
     if (selectedFiles.length > 0) {
       setIsUploading(true);
+      // Start the processing timer
+      startProcessingTimer();
+
       const formData = new FormData();
       formData.append('file', selectedFiles[0]);
 
@@ -53,20 +89,39 @@ export default function UploadPanel() {
       const base64Image = await convertFileToBase64(selectedFiles[0]);
 
       try {
-        const response = await fetch('http://localhost:8000/predict', {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
+        let response;
+        let success = false;
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        // Try each API URL until one works
+        for (let i = 0; i < API_URLS.length; i++) {
+          try {
+            const currentUrl = API_URLS[i];
+            console.log(`Trying to predict using: ${currentUrl}`);
+
+            response = await fetch(`${currentUrl}/predict`, {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'Accept': 'application/json',
+              },
+            });
+
+            if (response.ok) {
+              console.log(`Successfully connected to ${currentUrl}`);
+              success = true;
+              break;
+            }
+          } catch (err: any) {
+            console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+          }
+        }
+
+        if (!success || !response) {
+          throw new Error('Failed to predict using any API endpoint');
         }
 
         const result = await response.json();
-        
+
         if (result.success) {
           updateAnalysis({
             prediction: result.prediction,
@@ -82,9 +137,9 @@ export default function UploadPanel() {
           console.error('Prediction failed:', result.error);
           alert('Failed to analyze the image. Please try again.');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Upload failed:', error);
-        alert('Failed to upload the image. Please make sure the backend server is running on port 8000.');
+        alert(`Failed to upload the image: ${error.message}. Please make sure the backend server is running.`);
       } finally {
         setIsUploading(false);
       }
@@ -108,9 +163,9 @@ export default function UploadPanel() {
   return (
     <div className="space-y-6">
       <div className="card p-6">
-        <div 
-          className={`border-2 border-dashed rounded-lg p-6 bg-gray-50 
-            hover:bg-gray-50/80 transition-colors duration-200 
+        <div
+          className={`border-2 border-dashed rounded-lg p-6 bg-gray-50
+            hover:bg-gray-50/80 transition-colors duration-200
             ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
           onClick={() => !isUploading && document.getElementById('file-upload')?.click()}
@@ -127,8 +182,14 @@ export default function UploadPanel() {
               <p className="mt-1 text-sm text-gray-500">
                 {isUploading ? 'Analyzing image...' : 'Drag and drop an MRI scan or click to browse'}
               </p>
+              {isUploading && (
+                <div className="mt-2 flex items-center justify-center text-sm text-blue-600">
+                  <Clock className="h-4 w-4 mr-1" />
+                  <span>{(elapsedTime / 1000).toFixed(1)}s</span>
+                </div>
+              )}
             </div>
-            <button 
+            <button
               className={`mt-4 btn ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isUploading}
             >
@@ -151,7 +212,7 @@ export default function UploadPanel() {
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-medium text-gray-900">Uploaded Files</h4>
-            <button 
+            <button
               className="btn-secondary"
               onClick={() => document.getElementById('file-upload')?.click()}
               disabled={isUploading}
@@ -172,7 +233,7 @@ export default function UploadPanel() {
                     </span>
                   </div>
                 </div>
-                <button 
+                <button
                   className="text-gray-400 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   onClick={() => removeFile(index)}
                   disabled={isUploading}

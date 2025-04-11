@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2, Save } from 'lucide-react';
+import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2, Save, Clock } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 import SimilarCases from './SimilarCases';
 
@@ -15,8 +15,8 @@ const TUMOR_COLORS = {
 const TUMOR_ORDER = ['glioma', 'meningioma', 'pituitary', 'notumor'] as const;
 
 export default function AnalysisResults() {
-  const { analysis, saveAnalysisToPatient, currentPatientId, currentStudyId } = useAnalysis();
-  
+  const { analysis, saveAnalysisToPatient, currentPatientId, currentStudyId, stopProcessingTimer } = useAnalysis();
+
   // Add a helper function to show status
   const getStudyLinkStatus = () => {
     if (currentPatientId && currentStudyId) {
@@ -50,7 +50,12 @@ export default function AnalysisResults() {
   useEffect(() => {
     console.log('Analysis state in AnalysisResults:', analysis);
     console.log('Confidence scores:', analysis.confidenceScores);
-  }, [analysis]);
+
+    // If we have prediction results but no processing end time, stop the timer
+    if (analysis.prediction && !analysis.processingEndTime) {
+      stopProcessingTimer();
+    }
+  }, [analysis, stopProcessingTimer]);
 
   if (!analysis.prediction) {
     return null;
@@ -62,7 +67,7 @@ export default function AnalysisResults() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-display font-semibold text-gray-900">Analysis Results</h2>
-            
+
             {/* Add status indicator showing patient/study link */}
             {currentPatientId && currentStudyId ? (
               <p className="text-sm text-green-600 flex items-center mt-1">
@@ -76,16 +81,16 @@ export default function AnalysisResults() {
               </p>
             )}
           </div>
-          
+
           <div className="flex items-center space-x-3">
-            <button 
+            <button
               onClick={handleShare}
               className="btn-secondary"
             >
               <Share2 className="h-4 w-4 mr-2" />
               Share
             </button>
-            <button 
+            <button
               onClick={handleExport}
               className="btn"
             >
@@ -94,15 +99,23 @@ export default function AnalysisResults() {
             </button>
           </div>
         </div>
-        
+
         <div className="space-y-8">
           <div className="border-b border-gray-100 pb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-gray-500">Tumor Classification</h3>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center">
-                <History className="h-4 w-4 mr-1" />
-                View History
-              </button>
+              <div className="flex items-center">
+                {analysis.processingDuration !== null && (
+                  <div className="mr-4 text-sm text-gray-600 flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    {(analysis.processingDuration / 1000).toFixed(2)}s
+                  </div>
+                )}
+                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center">
+                  <History className="h-4 w-4 mr-1" />
+                  View History
+                </button>
+              </div>
             </div>
             <div className="space-y-3">
               {TUMOR_ORDER.map(label => (
@@ -115,7 +128,7 @@ export default function AnalysisResults() {
                   </div>
                   <div className="flex items-center">
                     <div className="w-32 h-2 bg-gray-100 rounded-full mr-3">
-                      <div 
+                      <div
                         className={`h-full ${TUMOR_COLORS[label]} rounded-full`}
                         style={{ width: `${(analysis.confidenceScores[label] || 0) * 100}%` }}
                       ></div>
@@ -186,11 +199,11 @@ export default function AnalysisResults() {
             </div>
           </div>
         </div>
-        
+
         {/* Add save button at the bottom when linked to patient */}
         {currentPatientId && currentStudyId && (
           <div className="mt-6 flex justify-end">
-            <button 
+            <button
               onClick={handleSaveAnalysis}
               className="btn flex items-center"
             >

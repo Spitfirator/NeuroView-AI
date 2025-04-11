@@ -58,8 +58,12 @@ interface PatientContextType {
   error: string | null;
 }
 
-// API URL
-const API_BASE_URL = 'http://localhost:8000';
+// API URLs - try both ports to support different development environments
+const API_URLS = ['http://localhost:8000', 'http://localhost:8001'];
+let currentApiUrlIndex = 0;
+let API_BASE_URL = API_URLS[currentApiUrlIndex];
+
+// We're handling API URL switching directly in the fetch functions
 
 // Create context
 const PatientContext = createContext<PatientContextType | undefined>(undefined);
@@ -124,19 +128,42 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     const fetchPatients = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/patients`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch patients');
+        let response;
+        let success = false;
+
+        // Try each API URL until one works
+        for (let i = 0; i < API_URLS.length; i++) {
+          try {
+            const currentUrl = API_URLS[i];
+            console.log(`Trying to fetch patients from: ${currentUrl}`);
+            response = await fetch(`${currentUrl}/patients`);
+
+            if (response.ok) {
+              // Update the current API URL if it's different
+              if (currentUrl !== API_BASE_URL) {
+                currentApiUrlIndex = i;
+                API_BASE_URL = currentUrl;
+                console.log(`Switched to working API URL: ${API_BASE_URL}`);
+              }
+              success = true;
+              break;
+            }
+          } catch (err: any) {
+            console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+          }
         }
-        
+
+        if (!success || !response) {
+          throw new Error('Failed to fetch patients from any API endpoint');
+        }
+
         const data = await response.json();
         console.log('API returned patients:', data);
-        
+
         // Transform the data to match our frontend model
         const transformedPatients = data.map(transformPatient);
         console.log('Transformed patients:', transformedPatients);
-        
+
         setPatients(transformedPatients);
         setError(null);
       } catch (err) {
@@ -157,7 +184,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
   const addStudy = async (patientId: string, study: Omit<Study, 'id'>) => {
     try {
       setIsLoading(true);
-      
+
       // Transform from camelCase to snake_case for API
       const apiStudy = {
         type: study.type,
@@ -166,21 +193,45 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         findings: study.findings,
         thumbnail_url: study.thumbnailUrl
       };
-      
-      const response = await fetch(`${API_BASE_URL}/patients/${patientId}/studies`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(apiStudy),
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to add study');
+      let response;
+      let success = false;
+
+      // Try each API URL until one works
+      for (let i = 0; i < API_URLS.length; i++) {
+        try {
+          const currentUrl = API_URLS[i];
+          console.log(`Trying to add study using: ${currentUrl}`);
+
+          response = await fetch(`${currentUrl}/patients/${patientId}/studies`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(apiStudy),
+          });
+
+          if (response.ok) {
+            // Update the current API URL if it's different
+            if (currentUrl !== API_BASE_URL) {
+              currentApiUrlIndex = i;
+              API_BASE_URL = currentUrl;
+              console.log(`Switched to working API URL: ${API_BASE_URL}`);
+            }
+            success = true;
+            break;
+          }
+        } catch (err: any) {
+          console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+        }
+      }
+
+      if (!success || !response) {
+        throw new Error('Failed to add study to any API endpoint');
       }
 
       const newApiStudy = await response.json();
-      
+
       // Transform the returned study to frontend format
       const newStudy = {
         id: newApiStudy.id,
@@ -190,7 +241,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         findings: newApiStudy.findings,
         thumbnailUrl: newApiStudy.thumbnail_url
       };
-      
+
       // Update local state
       setPatients(prevPatients => {
         return prevPatients.map(patient => {
@@ -203,9 +254,9 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
           return patient;
         });
       });
-      
+
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error adding study:', err);
       setError('Failed to add study. Please try again later.');
       throw err;
@@ -217,12 +268,36 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
   const removeStudy = async (patientId: string, studyId: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_BASE_URL}/patients/${patientId}/studies/${studyId}`, {
-        method: 'DELETE',
-      });
+      let response;
+      let success = false;
 
-      if (!response.ok) {
-        throw new Error('Failed to remove study');
+      // Try each API URL until one works
+      for (let i = 0; i < API_URLS.length; i++) {
+        try {
+          const currentUrl = API_URLS[i];
+          console.log(`Trying to remove study using: ${currentUrl}`);
+
+          response = await fetch(`${currentUrl}/patients/${patientId}/studies/${studyId}`, {
+            method: 'DELETE',
+          });
+
+          if (response.ok) {
+            // Update the current API URL if it's different
+            if (currentUrl !== API_BASE_URL) {
+              currentApiUrlIndex = i;
+              API_BASE_URL = currentUrl;
+              console.log(`Switched to working API URL: ${API_BASE_URL}`);
+            }
+            success = true;
+            break;
+          }
+        } catch (err: any) {
+          console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+        }
+      }
+
+      if (!success || !response) {
+        throw new Error('Failed to remove study from any API endpoint');
       }
 
       // Update local state
@@ -237,9 +312,9 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
           return patient;
         });
       });
-      
+
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error removing study:', err);
       setError('Failed to remove study. Please try again later.');
       throw err;
@@ -251,7 +326,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
   const addPatient = async (patientData: PatientFormData) => {
     try {
       setIsLoading(true);
-      
+
       // Calculate age based on date of birth
       const birthDate = new Date(patientData.dateOfBirth);
       const today = new Date();
@@ -260,10 +335,10 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      
+
       // Format emergency contact
       const emergencyContact = `${patientData.emergencyContactName} - ${patientData.emergencyContactPhone}`;
-      
+
       // Create a new patient object for the API (snake_case)
       const apiPatient = {
         name: patientData.fullName,
@@ -283,28 +358,52 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         status: 'scheduled',
         condition: 'Initial Consultation'
       };
-      
-      const response = await fetch(`${API_BASE_URL}/patients`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(apiPatient),
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to add patient');
+      let response;
+      let success = false;
+
+      // Try each API URL until one works
+      for (let i = 0; i < API_URLS.length; i++) {
+        try {
+          const currentUrl = API_URLS[i];
+          console.log(`Trying to add patient using: ${currentUrl}`);
+
+          response = await fetch(`${currentUrl}/patients`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(apiPatient),
+          });
+
+          if (response.ok) {
+            // Update the current API URL if it's different
+            if (currentUrl !== API_BASE_URL) {
+              currentApiUrlIndex = i;
+              API_BASE_URL = currentUrl;
+              console.log(`Switched to working API URL: ${API_BASE_URL}`);
+            }
+            success = true;
+            break;
+          }
+        } catch (err: any) {
+          console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+        }
+      }
+
+      if (!success || !response) {
+        throw new Error('Failed to add patient to any API endpoint');
       }
 
       const createdApiPatient = await response.json();
-      
+
       // Transform the API response to match frontend model
       const createdPatient = transformPatient(createdApiPatient);
-      
+
       // Update local state
       setPatients(prevPatients => [...prevPatients, createdPatient]);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error adding patient:', err);
       setError('Failed to add patient. Please try again later.');
       throw err;
@@ -316,9 +415,9 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
   const updateStudyAnalysis = async (patientId: string, studyId: string, analysisData: any) => {
     try {
       setIsLoading(true);
-      
+
       console.log('Saving analysis data to backend:', analysisData);
-      
+
       // Create the data to be saved - include both the original image and gradcam data
       const dataToSave = {
         prediction: analysisData.prediction,
@@ -331,22 +430,46 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         uploadedFileNames: analysisData.uploadedFileNames || [],
         timestamp: analysisData.timestamp || new Date().toISOString(),
       };
-      
-      const response = await fetch(`${API_BASE_URL}/patients/${patientId}/studies/${studyId}/analysis`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSave),
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to update study analysis');
+      let response;
+      let success = false;
+
+      // Try each API URL until one works
+      for (let i = 0; i < API_URLS.length; i++) {
+        try {
+          const currentUrl = API_URLS[i];
+          console.log(`Trying to update study analysis using: ${currentUrl}`);
+
+          response = await fetch(`${currentUrl}/patients/${patientId}/studies/${studyId}/analysis`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dataToSave),
+          });
+
+          if (response.ok) {
+            // Update the current API URL if it's different
+            if (currentUrl !== API_BASE_URL) {
+              currentApiUrlIndex = i;
+              API_BASE_URL = currentUrl;
+              console.log(`Switched to working API URL: ${API_BASE_URL}`);
+            }
+            success = true;
+            break;
+          }
+        } catch (err: any) {
+          console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+        }
+      }
+
+      if (!success || !response) {
+        throw new Error('Failed to update study analysis on any API endpoint');
       }
 
       const result = await response.json();
       console.log('Backend response:', result);
-      
+
       // Update local state
       setPatients(prevPatients => {
         return prevPatients.map(patient => {
@@ -369,10 +492,10 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
           return patient;
         });
       });
-      
+
       setError(null);
       return result;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating study analysis:', err);
       setError('Failed to update study analysis. Please try again later.');
       throw err;
@@ -382,11 +505,11 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   return (
-    <PatientContext.Provider value={{ 
-      patients, 
-      getPatient, 
-      addStudy, 
-      removeStudy, 
+    <PatientContext.Provider value={{
+      patients,
+      getPatient,
+      addStudy,
+      removeStudy,
       addPatient,
       updateStudyAnalysis,
       isLoading,

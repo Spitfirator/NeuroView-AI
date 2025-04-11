@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useAnalysis } from '../context/AnalysisContext';
 import { Brain, ChevronRight, X } from 'lucide-react';
 
+// API URLs - try both ports to support different development environments
+const API_URLS = ['http://localhost:8000', 'http://localhost:8001'];
+
 export default function SimilarCases() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -10,19 +13,41 @@ export default function SimilarCases() {
 
   const fetchSimilarCases = async () => {
     if (!analysis.prediction) return;
-    
+
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:8000/similar-cases/${analysis.prediction}`
-      );
+      let response;
+      let success = false;
+
+      // Try each API URL until one works
+      for (let i = 0; i < API_URLS.length; i++) {
+        try {
+          const currentUrl = API_URLS[i];
+          console.log(`Trying to fetch similar cases using: ${currentUrl}`);
+
+          response = await fetch(`${currentUrl}/similar-cases/${analysis.prediction}`);
+
+          if (response.ok) {
+            console.log(`Successfully connected to ${currentUrl}`);
+            success = true;
+            break;
+          }
+        } catch (err: any) {
+          console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+        }
+      }
+
+      if (!success || !response) {
+        throw new Error('Failed to fetch similar cases from any API endpoint');
+      }
+
       const data = await response.json();
-      
+
       if (data.success) {
         setSimilarCases(data.cases);
         setIsOpen(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch similar cases:', error);
     } finally {
       setIsLoading(false);
@@ -42,7 +67,7 @@ export default function SimilarCases() {
           <p className="mt-1 text-sm text-gray-600">
             Found {similarCases.length || '0'} similar cases in database
           </p>
-          <button 
+          <button
             className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700 inline-flex items-center"
             onClick={fetchSimilarCases}
             disabled={isLoading}
@@ -59,17 +84,17 @@ export default function SimilarCases() {
           <div className="bg-white rounded-lg max-w-2xl w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">Similar Cases</h3>
-              <button 
+              <button
                 onClick={() => setIsOpen(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               {similarCases.map((case_, index) => (
-                <div 
+                <div
                   key={index}
                   className="border rounded-lg p-4 hover:bg-gray-50"
                 >
@@ -94,4 +119,4 @@ export default function SimilarCases() {
       )}
     </>
   );
-} 
+}
