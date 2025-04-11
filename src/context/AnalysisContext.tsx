@@ -11,6 +11,9 @@ interface AnalysisState {
   uploadedFiles: File[];
   uploadedFileNames?: string[];
   timestamp?: string;
+  processingStartTime?: number;
+  processingEndTime?: number;
+  processingDuration?: number;
 }
 
 interface AnalysisContextType {
@@ -22,6 +25,9 @@ interface AnalysisContextType {
     uploadedFiles: File[];
     uploadedFileNames?: string[];
     timestamp?: string;
+    processingStartTime?: number;
+    processingEndTime?: number;
+    processingDuration?: number;
   };
   currentPatientId: string | null;
   currentStudyId: string | null;
@@ -34,13 +40,15 @@ interface AnalysisContextType {
   addUploadedFile: (file: File) => void;
   removeUploadedFile: (index: number) => void;
   updateAnalysisState: (data: Partial<typeof analysis>) => void;
+  startProcessingTimer: () => number;
+  stopProcessingTimer: () => void;
 }
 
 const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined);
 
 export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { updateStudyAnalysis } = usePatients();
-  
+
   const [analysis, setAnalysis] = useState({
     imageUrl: null as string | null,
     originalImageBase64: null as string | null,
@@ -51,8 +59,11 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
     uploadedFiles: [] as File[],
     uploadedFileNames: [] as string[],
     timestamp: null as string | null,
+    processingStartTime: null as number | null,
+    processingEndTime: null as number | null,
+    processingDuration: null as number | null,
   });
-  
+
   const [currentPatientId, setCurrentPatientId] = useState<string | null>(null);
   const [currentStudyId, setCurrentStudyId] = useState<string | null>(null);
 
@@ -80,6 +91,9 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
       uploadedFiles: [],
       uploadedFileNames: [],
       timestamp: null,
+      processingStartTime: null,
+      processingEndTime: null,
+      processingDuration: null,
     });
     setCurrentPatientId(null);
     setCurrentStudyId(null);
@@ -146,10 +160,36 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const updateAnalysisState = (data: Partial<typeof analysis>) => {
-    setAnalysis(prev => ({ 
-      ...prev, 
-      ...data 
+    setAnalysis(prev => ({
+      ...prev,
+      ...data
     }));
+  };
+
+  // Start the processing timer
+  const startProcessingTimer = () => {
+    const startTime = Date.now();
+    setAnalysis(prev => ({
+      ...prev,
+      processingStartTime: startTime,
+      processingEndTime: null,
+      processingDuration: null
+    }));
+    return startTime;
+  };
+
+  // Stop the processing timer and calculate duration
+  const stopProcessingTimer = () => {
+    const endTime = Date.now();
+    setAnalysis(prev => {
+      const startTime = prev.processingStartTime || endTime;
+      const duration = endTime - startTime;
+      return {
+        ...prev,
+        processingEndTime: endTime,
+        processingDuration: duration
+      };
+    });
   };
 
   return (
@@ -166,7 +206,9 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
         updateAnalysis,
         addUploadedFile,
         removeUploadedFile,
-        updateAnalysisState
+        updateAnalysisState,
+        startProcessingTimer,
+        stopProcessingTimer
       }}
     >
       {children}
@@ -180,4 +222,4 @@ export const useAnalysis = () => {
     throw new Error('useAnalysis must be used within an AnalysisProvider');
   }
   return context;
-}; 
+};

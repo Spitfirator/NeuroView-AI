@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { MessageSquare, Send, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
+// API URLs - try both ports to support different development environments
+const API_URLS = ['http://localhost:8000', 'http://localhost:8001'];
+
 interface Message {
   role: 'assistant' | 'user' | 'system';
   content: string;
@@ -86,24 +89,43 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
         content: input,
       });
 
-      const response = await fetch('http://localhost:8000/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: conversationHistory,
-          image: imageBase64,
-          max_tokens: 500,
-        }),
-      });
+      let response;
+      let success = false;
 
-      if (!response.ok) {
-        throw new Error('Failed to get AI response');
+      // Try each API URL until one works
+      for (let i = 0; i < API_URLS.length; i++) {
+        try {
+          const currentUrl = API_URLS[i];
+          console.log(`Trying to chat using: ${currentUrl}`);
+
+          response = await fetch(`${currentUrl}/chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              messages: conversationHistory,
+              image: imageBase64,
+              max_tokens: 500,
+            }),
+          });
+
+          if (response.ok) {
+            console.log(`Successfully connected to ${currentUrl}`);
+            success = true;
+            break;
+          }
+        } catch (err: any) {
+          console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+        }
+      }
+
+      if (!success || !response) {
+        throw new Error('Failed to get AI response from any API endpoint');
       }
 
       const data = await response.json();
-      
+
       const aiResponse: Message = {
         role: 'assistant',
         content: data.response,
@@ -125,10 +147,10 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
   };
 
   const handleDiagnosisApproval = (approved: boolean) => {
-    setDiagnosis(prev => ({ 
-      ...prev, 
+    setDiagnosis(prev => ({
+      ...prev,
       approved,
-      tumorType: analysis.prediction || null 
+      tumorType: analysis.prediction || null
     }));
     if (!approved) {
       setShowDiagnosisForm(true);
@@ -206,7 +228,7 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
           )}
         </div>
       </div>
-      
+
       <div className="h-[400px] flex flex-col">
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message, index) => (
@@ -309,7 +331,7 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
             </div>
           )}
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-4 border-t border-gray-100">
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
@@ -317,8 +339,8 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
                 type="button"
                 onClick={() => setIncludeImage(!includeImage)}
                 className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                  includeImage 
-                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                  includeImage
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -330,14 +352,14 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
                 </span>
               )}
             </div>
-            
+
             <div className="flex space-x-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={includeImage 
-                  ? "Ask about the MRI scan..." 
+                placeholder={includeImage
+                  ? "Ask about the MRI scan..."
                   : "Ask about the diagnosis..."}
                 className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
