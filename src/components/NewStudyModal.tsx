@@ -8,7 +8,7 @@ interface NewStudyModalProps {
     type: string;
     date: string;
     findings: string;
-    status: 'scheduled' | 'in-progress' | 'completed';
+    status: 'scheduled' | 'in-progress';
     thumbnailUrl: string;
   }) => void;
   patientName: string;
@@ -19,7 +19,7 @@ interface StudyFormData {
   date: string;
   time: string;
   description: string;
-  status: 'scheduled' | 'in-progress' | 'completed';
+  status: 'scheduled' | 'in-progress';
 }
 
 const initialFormData: StudyFormData = {
@@ -37,7 +37,7 @@ export default function NewStudyModal({ isOpen, onClose, onSave, patientName }: 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Transform the form data to match what the API expects
     const studyData = {
       type: formData.type,
@@ -46,7 +46,7 @@ export default function NewStudyModal({ isOpen, onClose, onSave, patientName }: 
       status: formData.status,
       thumbnailUrl: getThumbnailForStudyType(formData.type), // Generate a thumbnail URL based on study type
     };
-    
+
     onSave(studyData);
     setFormData(initialFormData);
     onClose();
@@ -60,7 +60,7 @@ export default function NewStudyModal({ isOpen, onClose, onSave, patientName }: 
       'X-Ray': 'https://placehold.co/200x200/f5f5f5/333333?text=X-Ray',
       'Ultrasound': 'https://placehold.co/200x200/e6f7ff/005599?text=Ultrasound',
     };
-    
+
     return thumbnails[type] || 'https://placehold.co/200x200/eeeeee/999999?text=Medical+Image';
   };
 
@@ -158,7 +158,6 @@ export default function NewStudyModal({ isOpen, onClose, onSave, patientName }: 
               >
                 <option value="scheduled">Scheduled</option>
                 <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
               </select>
             </div>
 
