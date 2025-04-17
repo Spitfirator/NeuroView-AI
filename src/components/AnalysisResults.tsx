@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2, Save, Clock } from 'lucide-react';
+import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2, Save, Clock, ChevronLeft } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 import SimilarCases from './SimilarCases';
 
@@ -14,7 +14,11 @@ const TUMOR_COLORS = {
 // Define the desired order
 const TUMOR_ORDER = ['glioma', 'meningioma', 'pituitary', 'notumor'] as const;
 
-export default function AnalysisResults() {
+interface AnalysisResultsProps {
+  onReturn?: () => void;
+}
+
+export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
   const { analysis, saveAnalysisToPatient, currentPatientId, currentStudyId, stopProcessingTimer } = useAnalysis();
 
   // Add a helper function to show status
@@ -84,21 +88,32 @@ export default function AnalysisResults() {
     <div className="card">
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-display font-semibold text-gray-900">Analysis Results</h2>
-
-            {/* Add status indicator showing patient/study link */}
-            {currentPatientId && currentStudyId ? (
-              <p className="text-sm text-green-600 flex items-center mt-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                Linked to patient record
-              </p>
-            ) : (
-              <p className="text-sm text-orange-600 flex items-center mt-1">
-                <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-                Not linked to any patient record
-              </p>
+          <div className="flex items-center space-x-4">
+            {onReturn && (
+              <button
+                onClick={onReturn}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                title="Return to previous view"
+              >
+                <ChevronLeft className="h-5 w-5 text-gray-500" />
+              </button>
             )}
+            <div>
+              <h2 className="text-lg font-display font-semibold text-gray-900">Analysis Results</h2>
+
+              {/* Add status indicator showing patient/study link */}
+              {currentPatientId && currentStudyId ? (
+                <p className="text-sm text-green-600 flex items-center mt-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                  Linked to patient record
+                </p>
+              ) : (
+                <p className="text-sm text-orange-600 flex items-center mt-1">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                  Not linked to any patient record
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center space-x-3">

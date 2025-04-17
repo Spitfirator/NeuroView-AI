@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { ChevronLeft } from 'lucide-react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import ImageViewer from './components/ImageViewer';
@@ -12,7 +13,11 @@ import GradCAMViewer from './components/GradCAMViewer';
 import AIAssistant from './components/AIAssistant';
 
 // This component uses useAnalysis, so it must be rendered inside AnalysisProvider
-function MainContent() {
+interface MainContentProps {
+  onReturn: () => void;
+}
+
+function MainContent({ onReturn }: MainContentProps) {
   const { analysis } = useAnalysis();
   const hasImage = analysis.imageUrl != null;
   const hasAnalysisResults = analysis.prediction != null;
@@ -20,6 +25,17 @@ function MainContent() {
   if (!hasImage) {
     return (
       <div className="max-w-md mx-auto">
+        {onReturn && (
+          <div className="mb-4">
+            <button
+              onClick={onReturn}
+              className="flex items-center text-blue-600 hover:text-blue-800 font-medium"
+            >
+              <ChevronLeft className="h-5 w-5 mr-1" />
+              Return to Patient
+            </button>
+          </div>
+        )}
         <UploadPanel />
       </div>
     );
@@ -28,10 +44,21 @@ function MainContent() {
   if (!hasAnalysisResults) {
     return (
       <div className="max-w-md mx-auto">
+        {onReturn && (
+          <div className="mb-4">
+            <button
+              onClick={onReturn}
+              className="flex items-center text-blue-600 hover:text-blue-800 font-medium"
+            >
+              <ChevronLeft className="h-5 w-5 mr-1" />
+              Return to Patient
+            </button>
+          </div>
+        )}
         <div className="card p-4 mb-6">
           <div className="aspect-square w-full">
             <img
-              src={analysis.imageUrl}
+              src={analysis.imageUrl || ''}
               alt="Study Thumbnail"
               className="w-full h-full object-contain"
             />
@@ -47,14 +74,25 @@ function MainContent() {
 
   return (
     <div className="space-y-6">
+      {onReturn && (
+        <div className="mb-4">
+          <button
+            onClick={onReturn}
+            className="flex items-center text-blue-600 hover:text-blue-800 font-medium"
+          >
+            <ChevronLeft className="h-5 w-5 mr-1" />
+            Return to Patient
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ImageViewer />
         <GradCAMViewer />
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <AnalysisResults />
+          <AnalysisResults onReturn={onReturn} />
           <AIAssistant />
         </div>
         <div className="lg:col-span-1">
@@ -66,7 +104,15 @@ function MainContent() {
 }
 
 // Create a separate component for patient-related content
-function PatientContent({ selectedView, selectedPatientId, handleBackToPatients, handlePatientSelect, handleStudySelect }) {
+interface PatientContentProps {
+  selectedView: 'patients' | 'analysis' | 'calendar' | 'studies';
+  selectedPatientId: string | null;
+  handleBackToPatients: () => void;
+  handlePatientSelect: (patientId: string) => void;
+  handleStudySelect: (studyId: string) => void;
+}
+
+function PatientContent({ selectedView, selectedPatientId, handleBackToPatients, handlePatientSelect, handleStudySelect }: PatientContentProps) {
   return (
     <>
       {selectedView === 'patients' && (
@@ -74,7 +120,7 @@ function PatientContent({ selectedView, selectedPatientId, handleBackToPatients,
           {selectedPatientId === null ? (
             <PatientList onPatientSelect={handlePatientSelect} />
           ) : (
-            <PatientDetails 
+            <PatientDetails
               patientId={selectedPatientId}
               onBack={handleBackToPatients}
               onStudySelect={handleStudySelect}
@@ -82,14 +128,14 @@ function PatientContent({ selectedView, selectedPatientId, handleBackToPatients,
           )}
         </>
       )}
-      
+
       {selectedView === 'calendar' && (
         <div className="py-12 text-center">
           <h2 className="text-2xl font-display font-semibold text-gray-900">Calendar View</h2>
           <p className="mt-2 text-gray-500">Scheduling and appointments would appear here.</p>
         </div>
       )}
-      
+
       {selectedView === 'studies' && (
         <div className="py-12 text-center">
           <h2 className="text-2xl font-display font-semibold text-gray-900">Studies Database</h2>
@@ -103,22 +149,30 @@ function PatientContent({ selectedView, selectedPatientId, handleBackToPatients,
 function App() {
   const [selectedView, setSelectedView] = useState<'patients' | 'analysis' | 'calendar' | 'studies'>('patients');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  
+  const [previousView, setPreviousView] = useState<'patients' | 'analysis' | 'calendar' | 'studies'>('patients');
+
   // Handle patient selection
   const handlePatientSelect = (patientId: string) => {
     setSelectedPatientId(patientId);
     console.log(`Selected patient: ${patientId}`);
   };
-  
+
   // Handle going back to patient list
   const handleBackToPatients = () => {
     setSelectedPatientId(null);
   };
-  
+
   // This function will be used inside AnalysisProvider's scope
   const handleStudySelectWithAnalysis = (studyId: string) => {
     console.log(`Selected study: ${studyId} for patient: ${selectedPatientId}`);
+    setPreviousView(selectedView); // Store the current view before changing
     setSelectedView('analysis');
+  };
+
+  // Handle returning from analysis to previous view
+  const handleReturnFromAnalysis = () => {
+    console.log(`Returning to previous view: ${previousView}`);
+    setSelectedView(previousView);
   };
 
   return (
@@ -127,12 +181,12 @@ function App() {
         <div className="min-h-screen bg-slate-50">
           <Header />
           <Sidebar selectedView={selectedView} onViewChange={setSelectedView} />
-          
+
           <main className="lg:pl-72">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              {selectedView === 'analysis' && <MainContent />}
-              
-              <PatientContent 
+              {selectedView === 'analysis' && <MainContent onReturn={handleReturnFromAnalysis} />}
+
+              <PatientContent
                 selectedView={selectedView}
                 selectedPatientId={selectedPatientId}
                 handleBackToPatients={handleBackToPatients}
