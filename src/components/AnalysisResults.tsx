@@ -241,13 +241,24 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
 
               <div className="flex items-start space-x-3">
                 <div className="mt-1">
-                  <AlertCircle className="h-5 w-5 text-red-500" />
+                  {/* Change icon color based on tumor presence */}
+                  <AlertCircle className={`h-5 w-5 ${analysis.prediction && analysis.prediction !== 'notumor' ? 'text-red-500' : 'text-green-500'}`} />
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-900">Critical Findings</h4>
-                  <p className="mt-1 text-sm text-gray-600">Mass effect on surrounding structures</p>
-                  <div className="mt-2 p-2 bg-red-50 border border-red-100 rounded-lg">
-                    <p className="text-xs text-red-700">Immediate attention required</p>
+                  {/* Change message based on tumor presence */}
+                  <p className="mt-1 text-sm text-gray-600">
+                    {analysis.prediction && analysis.prediction !== 'notumor'
+                      ? 'Mass effect on surrounding structures'
+                      : 'No mass effect on surrounding structures'}
+                  </p>
+                  {/* Change alert box based on tumor presence */}
+                  <div className={`mt-2 p-2 ${analysis.prediction && analysis.prediction !== 'notumor' ? 'bg-red-50 border border-red-100' : 'bg-green-50 border border-green-100'} rounded-lg`}>
+                    <p className={`text-xs ${analysis.prediction && analysis.prediction !== 'notumor' ? 'text-red-700' : 'text-green-700'}`}>
+                      {analysis.prediction && analysis.prediction !== 'notumor'
+                        ? 'Immediate attention required'
+                        : 'No immediate attention required'}
+                    </p>
                   </div>
                 </div>
               </div>
