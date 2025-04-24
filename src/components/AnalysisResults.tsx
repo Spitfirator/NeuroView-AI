@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2, Save, Clock, ChevronLeft } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
-import SimilarCases from './SimilarCases';
 
 // Define the tumor type colors
 const TUMOR_COLORS = {
@@ -21,13 +20,13 @@ interface AnalysisResultsProps {
 export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
   const { analysis, saveAnalysisToPatient, currentPatientId, currentStudyId, stopProcessingTimer } = useAnalysis();
 
-  // Add a helper function to show status
-  const getStudyLinkStatus = () => {
-    if (currentPatientId && currentStudyId) {
-      return `Linked to patient ID: ${currentPatientId.substring(0, 8)}... (Study: ${currentStudyId.substring(0, 8)}...)`;
-    }
-    return "Not linked to any patient study";
-  };
+  // Helper function to show status (used for debugging)
+  // const getStudyLinkStatus = () => {
+  //   if (currentPatientId && currentStudyId) {
+  //     return `Linked to patient ID: ${currentPatientId.substring(0, 8)}... (Study: ${currentStudyId.substring(0, 8)}...)`;
+  //   }
+  //   return "Not linked to any patient study";
+  // };
 
   const handleExport = () => {
     // In a real app, this would generate a PDF report
@@ -44,10 +43,10 @@ export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
       await saveAnalysisToPatient();
       // Show success notification
       alert('Analysis saved successfully to patient record!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save analysis:', error);
       // Show error notification
-      alert(`Failed to save analysis: ${error.message}`);
+      alert(`Failed to save analysis: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -144,7 +143,7 @@ export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
                     <Clock className="h-4 w-4 mr-1" />
                     <span title={`Processing started at: ${new Date(analysis.processingStartTime || 0).toLocaleTimeString()}
 ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.processingEndTime).toLocaleTimeString()}` : 'Processing in progress...'}`}>
-                      {(analysis.currentElapsedTime / 1000).toFixed(2)}s
+                      {((analysis.currentElapsedTime || 0) / 1000).toFixed(2)}s
                     </span>
                   </div>
                 )}
@@ -154,14 +153,33 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
                 </button>
               </div>
             </div>
+
+            {/* Prominent display of the predicted tumor type */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Predicted Tumor Type:</h4>
+              <div className="flex items-center">
+                <span className={`w-3 h-3 ${TUMOR_COLORS[analysis.prediction as keyof typeof TUMOR_COLORS]} rounded-full mr-2`}></span>
+                <span className="text-lg font-semibold text-gray-900">
+                  {analysis.prediction === 'notumor' ? 'No Tumor' : analysis.prediction?.charAt(0).toUpperCase() + analysis.prediction?.slice(1)}
+                </span>
+                <span className="ml-3 text-sm font-medium text-gray-700">
+                  ({((analysis.confidenceScores[analysis.prediction as string] || 0) * 100).toFixed(1)}% confidence)
+                </span>
+              </div>
+            </div>
+
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Classification Breakdown:</h4>
             <div className="space-y-3">
               {TUMOR_ORDER.map(label => (
-                <div key={label} className="flex items-center justify-between">
+                <div key={label} className={`flex items-center justify-between ${label === analysis.prediction ? 'bg-gray-50 p-2 rounded-lg' : ''}`}>
                   <div className="flex items-center space-x-2">
                     <span className={`w-2 h-2 ${TUMOR_COLORS[label]} rounded-full`}></span>
                     <span className="text-sm font-medium text-gray-900">
                       {label === 'notumor' ? 'No Tumor' : label.charAt(0).toUpperCase() + label.slice(1)}
                     </span>
+                    {label === analysis.prediction && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Predicted</span>
+                    )}
                   </div>
                   <div className="flex items-center">
                     <div className="w-32 h-2 bg-gray-100 rounded-full mr-3">
