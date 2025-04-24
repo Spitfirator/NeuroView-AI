@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import Header from './components/Header';
 import ImageViewer from './components/ImageViewer';
@@ -150,20 +150,74 @@ function App() {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [previousView, setPreviousView] = useState<'patients' | 'analysis' | 'calendar' | 'studies'>('patients');
 
+  // Initialize browser history on component mount
+  useEffect(() => {
+    // Replace the current history state with our initial app state
+    window.history.replaceState(
+      {
+        view: selectedView,
+        patientId: selectedPatientId,
+        previousView: previousView
+      },
+      ''
+    );
+
+    // Add event listener for popstate (browser back/forward buttons)
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state) {
+        // Restore app state from history state
+        setSelectedView(event.state.view || 'patients');
+        setSelectedPatientId(event.state.patientId || null);
+        setPreviousView(event.state.previousView || 'patients');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    // Clean up event listener on unmount
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // Update browser history when app state changes
+  const updateHistory = (state: any) => {
+    window.history.pushState(state, '');
+  };
+
   // Handle patient selection
   const handlePatientSelect = (patientId: string) => {
+    const newState = {
+      view: selectedView,
+      patientId: patientId,
+      previousView: previousView
+    };
+    updateHistory(newState);
     setSelectedPatientId(patientId);
     console.log(`Selected patient: ${patientId}`);
   };
 
   // Handle going back to patient list
   const handleBackToPatients = () => {
+    const newState = {
+      view: selectedView,
+      patientId: null,
+      previousView: previousView
+    };
+    updateHistory(newState);
     setSelectedPatientId(null);
   };
 
   // This function will be used inside AnalysisProvider's scope
   const handleStudySelectWithAnalysis = (studyId: string) => {
     console.log(`Selected study: ${studyId} for patient: ${selectedPatientId}`);
+    const newState = {
+      view: 'analysis',
+      patientId: selectedPatientId,
+      previousView: selectedView,
+      studyId: studyId
+    };
+    updateHistory(newState);
     setPreviousView(selectedView); // Store the current view before changing
     setSelectedView('analysis');
   };
@@ -171,6 +225,12 @@ function App() {
   // Handle returning from analysis to previous view
   const handleReturnFromAnalysis = () => {
     console.log(`Returning to previous view: ${previousView}`);
+    const newState = {
+      view: previousView,
+      patientId: selectedPatientId,
+      previousView: previousView
+    };
+    updateHistory(newState);
     setSelectedView(previousView);
   };
 
