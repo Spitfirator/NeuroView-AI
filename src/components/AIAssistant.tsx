@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Send, Loader2, CheckCircle2, XCircle, AlertCircle, Bot } from 'lucide-react';
+import { MessageSquare, Send, Loader2, Bot } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
 // API URLs - try all ports to support different development environments
@@ -11,24 +11,13 @@ interface Message {
   timestamp: Date;
 }
 
-interface Diagnosis {
-  approved: boolean | null;
-  tumorType: string | null;
-  notes: string;
-}
-
 export default function AIAssistant() {
   const { analysis } = useAnalysis();
   const [isActivated, setIsActivated] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [diagnosis, setDiagnosis] = useState<Diagnosis>({
-    approved: null,
-    tumorType: analysis.prediction || null,
-    notes: '',
-  });
-  const [showDiagnosisForm, setShowDiagnosisForm] = useState(false);
+  // Removed diagnosis state
 
   // Create a system prompt string
   const getSystemPrompt = () => {
@@ -151,18 +140,6 @@ Your role is to assist radiologists by providing general information about medic
       }]);
     } finally {
       setIsLoading(false);
-      setShowDiagnosisForm(true);
-    }
-  };
-
-  const handleDiagnosisApproval = (approved: boolean) => {
-    setDiagnosis(prev => ({
-      ...prev,
-      approved,
-      tumorType: analysis.prediction || null
-    }));
-    if (!approved) {
-      setShowDiagnosisForm(true);
     }
   };
 
@@ -237,26 +214,11 @@ Your role is to assist radiologists by providing general information about medic
   return (
     <div className="card">
       <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center">
           <div className="flex items-center space-x-2">
             <MessageSquare className="h-5 w-5 text-blue-600" />
             <h2 className="text-lg font-display font-semibold text-gray-900">AI Medical Assistant</h2>
           </div>
-          {diagnosis.approved !== null && (
-            <div className="flex items-center space-x-2">
-              {diagnosis.approved ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  <CheckCircle2 className="h-4 w-4 mr-1" />
-                  Diagnosis Approved
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                  <XCircle className="h-4 w-4 mr-1" />
-                  Diagnosis Rejected
-                </span>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -293,74 +255,7 @@ Your role is to assist radiologists by providing general information about medic
             </div>
           )}
 
-          {showDiagnosisForm && diagnosis.approved === null && (
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-4">
-                <AlertCircle className="h-5 w-5 text-blue-600" />
-                <h3 className="text-sm font-medium text-blue-900">Verify Diagnosis</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleDiagnosisApproval(true)}
-                    className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Approve Diagnosis
-                  </button>
-                  <button
-                    onClick={() => handleDiagnosisApproval(false)}
-                    className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject Diagnosis
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showDiagnosisForm && diagnosis.approved === false && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-900 mb-4">Correct Diagnosis</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tumor Type
-                  </label>
-                  <select
-                    value={diagnosis.tumorType || ''}
-                    onChange={(e) => setDiagnosis(prev => ({ ...prev, tumorType: e.target.value }))}
-                    className="w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select tumor type</option>
-                    <option value="glioma">Glioma</option>
-                    <option value="meningioma">Meningioma</option>
-                    <option value="pituitary">Pituitary</option>
-                    <option value="no-tumor">No Tumor</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Additional Notes
-                  </label>
-                  <textarea
-                    value={diagnosis.notes}
-                    onChange={(e) => setDiagnosis(prev => ({ ...prev, notes: e.target.value }))}
-                    rows={3}
-                    className="w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter your diagnostic notes..."
-                  />
-                </div>
-                <button
-                  onClick={() => setShowDiagnosisForm(false)}
-                  className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Submit Correction
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Diagnosis verification UI removed */}
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 border-t border-gray-100">
