@@ -53,6 +53,7 @@ interface PatientContextType {
   addStudy: (patientId: string, study: Omit<Study, 'id'>) => Promise<void>;
   removeStudy: (patientId: string, studyId: string) => Promise<void>;
   addPatient: (patientData: PatientFormData) => Promise<void>;
+  removePatient: (patientId: string) => Promise<void>;
   updateStudyAnalysis: (patientId: string, studyId: string, analysisData: any) => Promise<any>;
   isLoading: boolean;
   error: string | null;
@@ -509,6 +510,54 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
+  const removePatient = async (patientId: string) => {
+    try {
+      setIsLoading(true);
+      let response;
+      let success = false;
+
+      // Try each API URL until one works
+      for (let i = 0; i < API_URLS.length; i++) {
+        try {
+          const currentUrl = API_URLS[i];
+          console.log(`Trying to remove patient using: ${currentUrl}`);
+
+          response = await fetch(`${currentUrl}/patients/${patientId}`, {
+            method: 'DELETE',
+          });
+
+          if (response.ok) {
+            // Update the current API URL if it's different
+            if (currentUrl !== API_BASE_URL) {
+              currentApiUrlIndex = i;
+              API_BASE_URL = currentUrl;
+              console.log(`Switched to working API URL: ${API_BASE_URL}`);
+            }
+            success = true;
+            break;
+          }
+        } catch (err: any) {
+          console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+        }
+      }
+
+      if (!success || !response) {
+        throw new Error('Failed to remove patient from any API endpoint');
+      }
+
+      // Update local state
+      setPatients(prevPatients => prevPatients.filter(patient => patient.id !== patientId));
+
+      setError(null);
+    } catch (err: any) {
+      console.error('Error removing patient:', err);
+      setError('Failed to remove patient. Please try again later.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <PatientContext.Provider value={{
       patients,
@@ -516,6 +565,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       addStudy,
       removeStudy,
       addPatient,
+      removePatient,
       updateStudyAnalysis,
       isLoading,
       error

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, ChevronRight, Users, FileText, AlertCircle, BarChart, Clock } from 'lucide-react';
+import { Search, Plus, Filter, ChevronRight, Users, FileText, AlertCircle, BarChart, Clock, Trash2 } from 'lucide-react';
 import { usePatients } from '../context/PatientContext';
 import NewPatientModal from './NewPatientModal';
 
@@ -45,12 +45,16 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
-  
-  // Get patients and addPatient function from context
-  const { patients, addPatient } = usePatients();
-  
+
+  // Get patients and patient management functions from context
+  const { patients, addPatient, removePatient } = usePatients();
+
+  // State for confirmation dialog
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
+
   // Filter patients based on search term
-  const filteredPatients = patients.filter(patient => 
+  const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.condition.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -66,25 +70,50 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
           ...patient,
           studies: [] // Clear all studies
         }));
-        
+
         // Save back to localStorage
         localStorage.setItem('patients', JSON.stringify(resetPatients));
         window.location.reload();
       }
     }
   };
-  
+
   // Handle saving a new patient
   const handleSavePatient = (patientData) => {
     addPatient(patientData);
     setIsNewPatientModalOpen(false);
   };
 
+  // Handle patient deletion
+  const handleDeleteClick = (e, patientId) => {
+    e.stopPropagation(); // Prevent triggering the parent onClick
+    setPatientToDelete(patientId);
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeletePatient = async () => {
+    if (patientToDelete) {
+      try {
+        await removePatient(patientToDelete);
+        setPatientToDelete(null);
+        setShowDeleteConfirmation(false);
+      } catch (error) {
+        console.error('Failed to delete patient:', error);
+        alert('Failed to delete patient. Please try again.');
+      }
+    }
+  };
+
+  const cancelDeletePatient = () => {
+    setPatientToDelete(null);
+    setShowDeleteConfirmation(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-display font-semibold text-gray-900">Patients</h1>
-        <button 
+        <button
           className="btn"
           onClick={() => setIsNewPatientModalOpen(true)}
         >
@@ -231,6 +260,13 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
                           >
                             {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
                           </span>
+                          <button
+                            onClick={(e) => handleDeleteClick(e, patient.id)}
+                            className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
+                            title="Delete patient"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                           <ChevronRight className="h-5 w-5 text-gray-400" />
                         </div>
                       </div>
@@ -283,19 +319,45 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
         </div>
       </div>
 
-      <button 
+      <button
         onClick={resetPatientData}
         className="text-xs text-red-600 hover:text-red-800"
       >
         Reset Data
       </button>
-      
+
       {/* New Patient Modal */}
       <NewPatientModal
         isOpen={isNewPatientModalOpen}
         onClose={() => setIsNewPatientModalOpen(false)}
         onSave={handleSavePatient}
       />
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Deletion</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to delete this patient? This action cannot be undone and will remove all associated studies and data.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelDeletePatient}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeletePatient}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
