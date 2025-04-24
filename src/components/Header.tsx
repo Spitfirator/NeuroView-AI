@@ -8,19 +8,21 @@ export default function Header() {
         <div className="flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center">
             <div className="flex items-center flex-shrink-0">
-              <Brain className="h-8 w-8 text-blue-600" />
+              <img
+                src="/images/NeuroViewAI_logo.png"
+                alt="NeuroView AI Logo"
+                className="h-12"
+              />
               <span className="ml-2.5 text-xl font-display font-semibold text-gray-900">NeuroView AI</span>
             </div>
             <div className="hidden lg:flex lg:ml-10">
               <div className="flex space-x-4">
                 <a href="#" className="px-3 py-2 text-sm font-medium text-gray-900">Dashboard</a>
-                <a href="#" className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-900">Patients</a>
                 <a href="#" className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-900">Studies</a>
-                <a href="#" className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-900">Analytics</a>
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-5">
             <div className="flex-1 min-w-0 md:px-2 lg:px-0 xl:col-span-6">
               <div className="flex items-center px-6 py-4 md:max-w-3xl md:mx-auto lg:max-w-none lg:mx-0 xl:px-0">
@@ -38,7 +40,7 @@ export default function Header() {
                 </div>
               </div>
             </div>
-            
+
             <button className="p-2 text-gray-400 hover:text-gray-500 rounded-lg hover:bg-gray-50">
               <Bell className="h-6 w-6" />
             </button>
