@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Send, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { MessageSquare, Send, Loader2, CheckCircle2, XCircle, AlertCircle, Bot } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
 // API URLs - try all ports to support different development environments
@@ -19,30 +19,46 @@ interface Diagnosis {
 
 export default function AIAssistant() {
   const { analysis } = useAnalysis();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: "Hello! I'm your AI medical assistant. How can I help you today?",
-      timestamp: new Date(),
-    }
-  ]);
-  const [input, setInput] = useState(() => `You are an AI medical assistant specializing in brain MRI analysis. You have access to:
-- Current MRI scan (when included in the message)
-- Tumor classification: ${analysis.prediction || 'Unknown'}
-- Confidence scores:
-${Object.entries(analysis.confidenceScores || {})
-  .map(([type, score]) => `  * ${type}: ${(score * 100).toFixed(1)}%`)
-  .join('\n')}
-
-Please provide detailed insights about the MRI findings when asked. Be specific about visible features and maintain a professional, medical tone.`);
+  const [isActivated, setIsActivated] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [includeImage, setIncludeImage] = useState(true);
   const [diagnosis, setDiagnosis] = useState<Diagnosis>({
     approved: null,
     tumorType: analysis.prediction || null,
     notes: '',
   });
   const [showDiagnosisForm, setShowDiagnosisForm] = useState(false);
+
+  // Create a system prompt string
+  const getSystemPrompt = () => {
+    return `You are an AI medical assistant with knowledge of medical terminology and procedures.
+
+You are aware of the following information about the current case:
+- Patient was predicted to have: ${analysis.prediction || 'Unknown'} tumor
+- Classification report:
+${Object.entries(analysis.confidenceScores || {})
+  .map(([type, score]) => `  * ${type}: ${(score * 100).toFixed(1)}%`)
+  .join('\n')}
+
+Your role is to assist radiologists by providing general information about medical procedures, terminology, and answering questions they might have. Always maintain a professional, medical tone and clarify that you are not providing a diagnosis.`;
+  };
+
+  const activateAssistant = () => {
+    // Initialize with welcome message
+    setMessages([
+      {
+        role: 'assistant',
+        content: "Hello! I'm your AI medical assistant. How can I help you today?",
+        timestamp: new Date(),
+      }
+    ]);
+
+    // Don't set the system prompt in the input field
+    setInput('');
+
+    setIsActivated(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,24 +75,9 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
     setIsLoading(true);
 
     try {
-      let imageBase64 = null;
-      if (includeImage && analysis.imageUrl) {
-        if (analysis.imageUrl.startsWith('data:image')) {
-          imageBase64 = analysis.imageUrl.split(',')[1];
-        } else {
-          const response = await fetch(analysis.imageUrl);
-          const blob = await response.blob();
-          imageBase64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const base64 = (reader.result as string).split(',')[1];
-              resolve(base64);
-            };
-            reader.readAsDataURL(blob);
-          });
-        }
-      }
+      // Removed image handling code
 
+      // Get conversation history excluding system messages
       const conversationHistory = messages
         .filter(msg => msg.role !== 'system')
         .map(({ role, content }) => ({
@@ -84,6 +85,15 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
           content,
         }));
 
+      // If this is the first user message, add a system message at the beginning
+      if (messages.length === 1) { // Only the welcome message exists
+        conversationHistory.unshift({
+          role: 'system',
+          content: getSystemPrompt()
+        });
+      }
+
+      // Add the current user message
       conversationHistory.push({
         role: 'user',
         content: input,
@@ -105,7 +115,6 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
             },
             body: JSON.stringify({
               messages: conversationHistory,
-              image: imageBase64,
               max_tokens: 500,
             }),
           });
@@ -203,13 +212,35 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
     });
   };
 
+  if (!isActivated) {
+    return (
+      <div className="card backdrop-blur-sm bg-white/70 hover:bg-white/80 transition-all duration-300">
+        <div className="p-6 flex flex-col items-center justify-center text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
+            <Bot className="h-8 w-8 text-blue-600" />
+          </div>
+          <h2 className="text-lg font-display font-semibold text-gray-900">AI Medical Assistant</h2>
+          <p className="text-gray-500 max-w-md">
+            Get assistance with medical questions. For ethical reasons, the AI doesn't directly analyze MRI scans or provide diagnoses, it only knows the predicted tumor type. It's here to assist radiologists with general information and answer questions about procedures and terminology.
+          </p>
+          <button
+            onClick={activateAssistant}
+            className="btn px-6 py-2"
+          >
+            Activate AI Assistant
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="card">
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <MessageSquare className="h-5 w-5 text-blue-600" />
-            <h2 className="text-lg font-display font-semibold text-gray-900">AI Diagnostic Assistant</h2>
+            <h2 className="text-lg font-display font-semibold text-gray-900">AI Medical Assistant</h2>
           </div>
           {diagnosis.approved !== null && (
             <div className="flex items-center space-x-2">
@@ -334,33 +365,12 @@ Please provide detailed insights about the MRI findings when asked. Be specific 
 
         <form onSubmit={handleSubmit} className="p-4 border-t border-gray-100">
           <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                onClick={() => setIncludeImage(!includeImage)}
-                className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                  includeImage
-                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {includeImage ? '✓ Including MRI' : '+ Include MRI'}
-              </button>
-              {includeImage && (
-                <span className="text-xs text-gray-500">
-                  The AI will analyze the current MRI scan
-                </span>
-              )}
-            </div>
-
             <div className="flex space-x-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={includeImage
-                  ? "Ask about the MRI scan..."
-                  : "Ask about the diagnosis..."}
+                placeholder="Ask a medical question..."
                 className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button

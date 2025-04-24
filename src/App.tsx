@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import Header from './components/Header';
-import Sidebar from './components/Sidebar';
 import ImageViewer from './components/ImageViewer';
 import AnalysisResults from './components/AnalysisResults';
 import UploadPanel from './components/UploadPanel';
@@ -180,9 +179,8 @@ function App() {
       <AnalysisProvider>
         <div className="min-h-screen bg-slate-50">
           <Header />
-          <Sidebar selectedView={selectedView} onViewChange={setSelectedView} />
 
-          <main className="lg:pl-72">
+          <main>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               {selectedView === 'analysis' && <MainContent onReturn={handleReturnFromAnalysis} />}
 
