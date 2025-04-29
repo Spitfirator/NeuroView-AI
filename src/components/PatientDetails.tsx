@@ -63,6 +63,10 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
       // Check for analysis data with either property name
       const analysisData = study.analysisData || study.analysis_data;
 
+      // Debug log to see what's in the study
+      console.log('Study object:', study);
+      console.log('Analysis data from study:', analysisData);
+
       // First, check if there is analysis data saved with the study
       if (analysisData) {
         console.log('Loading saved analysis data:', analysisData);
@@ -92,6 +96,25 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
           analysisUpdate.processingDuration = analysisData.processingDuration || null;
           analysisUpdate.currentElapsedTime = analysisData.currentElapsedTime || analysisData.processingDuration || null;
           console.log('Restored processing time:', analysisUpdate.processingDuration, 'ms');
+        }
+
+        // Restore radiologist's diagnosis and approval status if available
+        // Check if radiologistDiagnosis exists and is not null
+        if (analysisData.radiologistDiagnosis !== undefined && analysisData.radiologistDiagnosis !== null) {
+          analysisUpdate.radiologistDiagnosis = analysisData.radiologistDiagnosis;
+          console.log('Restored radiologist diagnosis:', analysisData.radiologistDiagnosis);
+        } else {
+          console.log('No radiologist diagnosis found in saved data');
+        }
+
+        // Check if approvalStatus exists and is not null
+        if (analysisData.approvalStatus !== undefined && analysisData.approvalStatus !== null) {
+          analysisUpdate.approvalStatus = analysisData.approvalStatus;
+          analysisUpdate.approvalTimestamp = analysisData.approvalTimestamp || null;
+          analysisUpdate.approvalNotes = analysisData.approvalNotes || null;
+          console.log('Restored approval status:', analysisData.approvalStatus);
+        } else {
+          console.log('No approval status found in saved data');
         }
       }
       else {
