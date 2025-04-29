@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2, Save, Clock, ChevronLeft } from 'lucide-react';
+import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2, Save, Clock, ChevronLeft, CheckCircle, HelpCircle } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
 // Define the tumor type colors
@@ -18,7 +18,7 @@ interface AnalysisResultsProps {
 }
 
 export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
-  const { analysis, saveAnalysisToPatient, currentPatientId, currentStudyId, stopProcessingTimer } = useAnalysis();
+  const { analysis, saveAnalysisToPatient, currentPatientId, currentStudyId, stopProcessingTimer, setRadiologistDiagnosis } = useAnalysis();
 
   // Helper function to show status (used for debugging)
   // const getStudyLinkStatus = () => {
@@ -49,6 +49,8 @@ export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
       alert(`Failed to save analysis: ${error.message || 'Unknown error'}`);
     }
   };
+
+
 
   // Track the previous prediction
   const [prevPrediction, setPrevPrediction] = useState<string | null>(null);
@@ -156,30 +158,95 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
 
             {/* Prominent display of the predicted tumor type */}
             <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Predicted Tumor Type:</h4>
-              <div className="flex items-center">
-                <span className={`w-3 h-3 ${TUMOR_COLORS[analysis.prediction as keyof typeof TUMOR_COLORS]} rounded-full mr-2`}></span>
-                <span className="text-lg font-semibold text-gray-900">
-                  {analysis.prediction === 'notumor' ? 'No Tumor' : analysis.prediction?.charAt(0).toUpperCase() + analysis.prediction?.slice(1)}
-                </span>
-                <span className="ml-3 text-sm font-medium text-gray-700">
-                  ({((analysis.confidenceScores[analysis.prediction as string] || 0) * 100).toFixed(1)}% confidence)
-                </span>
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="text-sm font-medium text-gray-700">
+                  {analysis.radiologistDiagnosis && analysis.radiologistDiagnosis !== analysis.prediction
+                    ? "Diagnosis:"
+                    : "AI Predicted Tumor Type:"}
+                </h4>
+
+                {/* Status indicator */}
+                {analysis.radiologistDiagnosis ? (
+                  <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    analysis.radiologistDiagnosis === analysis.prediction
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-purple-100 text-purple-800'
+                  }`}>
+                    {analysis.radiologistDiagnosis === analysis.prediction
+                      ? <CheckCircle className="h-3 w-3 mr-1" />
+                      : <span className="w-2 h-2 bg-purple-500 rounded-full mr-1"></span>
+                    }
+                    {analysis.radiologistDiagnosis === analysis.prediction
+                      ? 'Confirmed by Radiologist'
+                      : 'Radiologist Assessment'
+                    }
+                  </div>
+                ) : (
+                  <div className="flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    <HelpCircle className="h-3 w-3 mr-1" />
+                    Awaiting Assessment
+                  </div>
+                )}
               </div>
+
+              <div className="flex items-center mt-3">
+                {/* Show the radiologist's diagnosis if available and different from AI, otherwise show AI prediction */}
+                <span className={`w-3 h-3 ${
+                  analysis.radiologistDiagnosis && analysis.radiologistDiagnosis !== analysis.prediction
+                    ? TUMOR_COLORS[analysis.radiologistDiagnosis as keyof typeof TUMOR_COLORS]
+                    : TUMOR_COLORS[analysis.prediction as keyof typeof TUMOR_COLORS]
+                } rounded-full mr-2`}></span>
+                <span className="text-lg font-semibold text-gray-900">
+                  {analysis.radiologistDiagnosis && analysis.radiologistDiagnosis !== analysis.prediction
+                    ? (analysis.radiologistDiagnosis === 'notumor' ? 'No Tumor' : analysis.radiologistDiagnosis.charAt(0).toUpperCase() + analysis.radiologistDiagnosis.slice(1))
+                    : (analysis.prediction === 'notumor' ? 'No Tumor' : analysis.prediction?.charAt(0).toUpperCase() + analysis.prediction?.slice(1))
+                  }
+                </span>
+
+                {/* Only show confidence for AI prediction */}
+                {(!analysis.radiologistDiagnosis || analysis.radiologistDiagnosis === analysis.prediction) && (
+                  <span className="ml-3 text-sm font-medium text-gray-700">
+                    ({((analysis.confidenceScores[analysis.prediction as string] || 0) * 100).toFixed(1)}% AI confidence)
+                  </span>
+                )}
+              </div>
+
+
             </div>
 
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Classification Breakdown:</h4>
+            <div className="flex justify-between items-center mb-3 mt-6">
+              <h4 className="text-sm font-medium text-gray-700">Classification Breakdown:</h4>
+              <div className="text-xs text-blue-600 font-medium flex items-center">
+                <span className="w-2 h-2 bg-purple-500 rounded-full mr-1"></span>
+                Click to select your diagnosis
+              </div>
+            </div>
             <div className="space-y-3">
               {TUMOR_ORDER.map(label => (
-                <div key={label} className={`flex items-center justify-between ${label === analysis.prediction ? 'bg-gray-50 p-2 rounded-lg' : ''}`}>
+                <div
+                  key={label}
+                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors duration-200 ${
+                    label === analysis.prediction
+                      ? 'bg-blue-50 border border-blue-100'
+                      : label === analysis.radiologistDiagnosis
+                        ? 'bg-purple-50 border border-purple-100'
+                        : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => setRadiologistDiagnosis(label)}
+                >
                   <div className="flex items-center space-x-2">
                     <span className={`w-2 h-2 ${TUMOR_COLORS[label]} rounded-full`}></span>
                     <span className="text-sm font-medium text-gray-900">
                       {label === 'notumor' ? 'No Tumor' : label.charAt(0).toUpperCase() + label.slice(1)}
                     </span>
-                    {label === analysis.prediction && (
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Predicted</span>
-                    )}
+                    <div className="flex space-x-1">
+                      {label === analysis.prediction && (
+                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">AI Prediction</span>
+                      )}
+                      {label === analysis.radiologistDiagnosis && (
+                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">Radiologist's Choice</span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center">
                     <div className="w-32 h-2 bg-gray-100 rounded-full mr-3">
@@ -268,10 +335,43 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
 
         {/* Add save button at the bottom when linked to patient */}
         {currentPatientId && currentStudyId && (
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              {analysis.radiologistDiagnosis ? (
+                <div className={`flex items-center ${
+                  analysis.radiologistDiagnosis === analysis.prediction ? 'text-green-600' : 'text-purple-600'
+                }`}>
+                  {analysis.radiologistDiagnosis === analysis.prediction
+                    ? <CheckCircle className="h-4 w-4 mr-1" />
+                    : <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                  }
+                  <span>
+                    {analysis.radiologistDiagnosis === analysis.prediction
+                      ? 'AI diagnosis approved by radiologist'
+                      : `AI diagnosis rejected. Radiologist's diagnosis: ${analysis.radiologistDiagnosis === 'notumor' ? 'No Tumor' : analysis.radiologistDiagnosis.charAt(0).toUpperCase() + analysis.radiologistDiagnosis.slice(1)}`
+                    }
+                  </span>
+                </div>
+              ) : (
+                <div className="text-orange-600 flex items-center">
+                  <HelpCircle className="h-4 w-4 mr-1" />
+                  <span>Please select your diagnosis from the classification breakdown</span>
+                </div>
+              )}
+            </div>
             <button
               onClick={handleSaveAnalysis}
-              className="btn flex items-center"
+              disabled={!analysis.radiologistDiagnosis}
+              className={`flex items-center ${
+                !analysis.radiologistDiagnosis
+                  ? 'btn-disabled'
+                  : 'btn'
+              }`}
+              title={
+                !analysis.radiologistDiagnosis
+                  ? 'Please select your diagnosis from the classification breakdown'
+                  : 'Save analysis to patient record'
+              }
             >
               <Save className="h-4 w-4 mr-2" />
               Save Analysis to Patient Record

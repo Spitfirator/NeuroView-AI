@@ -34,9 +34,9 @@ class Patient(Base):
     studies = relationship("Study", back_populates="patient", cascade="all, delete-orphan")
     
     # JSON columns (stored as TEXT in SQLite)
-    medical_history = Column(Text)  # Will store JSON as string
-    medications = Column(Text)      # Will store JSON as string
-    allergies = Column(Text)        # Will store JSON as string
+    medical_history = Column(Text)  
+    medications = Column(Text)     
+    allergies = Column(Text)        
 
 class Study(Base):
     __tablename__ = "studies"

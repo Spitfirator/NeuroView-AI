@@ -34,19 +34,19 @@ app.add_middleware(
 # Include the patient router
 app.include_router(patient_router)
 
-# Load the model
+# Load the model we trained on Kaggle dataset 
 model = tf.keras.models.load_model('app/models/Bmodel_v2.keras')
 
-# Labels (matching your training data)
+# Labels
 LABELS = ['glioma', 'meningioma', 'notumor', 'pituitary']
 
 # Store predictions and their images for similarity matching
 case_database: List[Dict] = []
 
-# Load environment variables
+# load environment variables
 load_dotenv()
 
-# Initialize the OpenAI client
+# initialise the OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class Message(BaseModel):

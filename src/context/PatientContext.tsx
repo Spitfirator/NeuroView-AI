@@ -435,6 +435,12 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         processingEndTime: analysisData.processingEndTime || null,
         processingDuration: analysisData.processingDuration || null,
         currentElapsedTime: analysisData.currentElapsedTime || analysisData.processingDuration || null,
+        // Include radiologist's diagnosis and approval status
+        radiologistDiagnosis: analysisData.radiologistDiagnosis || null,
+        approvalStatus: analysisData.approvalStatus || 'pending',
+        approvalTimestamp: analysisData.approvalTimestamp || null,
+        approvalNotes: analysisData.approvalNotes || null,
+        finalDiagnosis: analysisData.finalDiagnosis || analysisData.radiologistDiagnosis || null,
       };
 
       let response;

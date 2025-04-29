@@ -15,6 +15,10 @@ interface AnalysisState {
   processingEndTime?: number;
   processingDuration?: number;
   currentElapsedTime?: number; // Live elapsed time for synchronizing components
+  approvalStatus?: 'pending' | 'approved' | 'rejected'; // Radiologist's approval status
+  approvalTimestamp?: string; // When the radiologist made the approval decision
+  approvalNotes?: string; // Optional notes from the radiologist
+  radiologistDiagnosis: string | null; // Radiologist's selected tumor type
 }
 
 interface AnalysisContextType {
@@ -25,11 +29,15 @@ interface AnalysisContextType {
     gradcamUrl: string | null;
     uploadedFiles: File[];
     uploadedFileNames?: string[];
-    timestamp?: string;
-    processingStartTime?: number;
-    processingEndTime?: number;
-    processingDuration?: number;
-    currentElapsedTime?: number; // Live elapsed time for synchronizing components
+    timestamp?: string | null;
+    processingStartTime?: number | null;
+    processingEndTime?: number | null;
+    processingDuration?: number | null;
+    currentElapsedTime?: number | null; // Live elapsed time for synchronizing components
+    approvalStatus: 'pending' | 'approved' | 'rejected'; // Radiologist's approval status
+    approvalTimestamp: string | null; // When the radiologist made the approval decision
+    approvalNotes: string | null; // Optional notes from the radiologist
+    radiologistDiagnosis: string | null; // Radiologist's selected tumor type
   };
   currentPatientId: string | null;
   currentStudyId: string | null;
@@ -41,10 +49,12 @@ interface AnalysisContextType {
   updateAnalysis: (data: any) => void;
   addUploadedFile: (file: File) => void;
   removeUploadedFile: (index: number) => void;
-  updateAnalysisState: (data: Partial<typeof analysis>) => void;
+  updateAnalysisState: (data: Partial<any>) => void;
   startProcessingTimer: () => number;
   stopProcessingTimer: () => void;
   updateElapsedTime: (elapsed: number) => void;
+  setApprovalStatus: (status: 'pending' | 'approved' | 'rejected', notes?: string) => void;
+  setRadiologistDiagnosis: (diagnosis: string) => void;
 }
 
 const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined);
@@ -66,6 +76,10 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
     processingEndTime: null as number | null,
     processingDuration: null as number | null,
     currentElapsedTime: null as number | null,
+    approvalStatus: 'pending' as 'pending' | 'approved' | 'rejected',
+    approvalTimestamp: null as string | null,
+    approvalNotes: null as string | null,
+    radiologistDiagnosis: null as string | null,
   });
 
   const [currentPatientId, setCurrentPatientId] = useState<string | null>(null);
@@ -81,6 +95,11 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
       prediction,
       confidenceScores,
       gradcamUrl,
+      // Reset radiologist's diagnosis to null when new results are displayed
+      radiologistDiagnosis: null,
+      // Reset approval status to pending
+      approvalStatus: 'pending',
+      approvalTimestamp: null,
     }));
   };
 
@@ -99,6 +118,10 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
       processingEndTime: null,
       processingDuration: null,
       currentElapsedTime: null,
+      approvalStatus: 'pending',
+      approvalTimestamp: null,
+      approvalNotes: null,
+      radiologistDiagnosis: null,
     });
     setCurrentPatientId(null);
     setCurrentStudyId(null);
@@ -126,6 +149,11 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
       };
     }
 
+    // Validate that radiologist has made an assessment
+    if (!analysis.radiologistDiagnosis) {
+      throw new Error('Cannot save analysis: radiologist must select a diagnosis');
+    }
+
     // Create a comprehensive analysis data object
     const analysisData = {
       prediction: analysis.prediction,
@@ -144,6 +172,14 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
       processingEndTime: analysis.processingEndTime,
       processingDuration: analysis.processingDuration,
       currentElapsedTime: analysis.processingDuration || analysis.currentElapsedTime,
+      // Include approval status information
+      approvalStatus: analysis.approvalStatus,
+      approvalTimestamp: analysis.approvalTimestamp,
+      approvalNotes: analysis.approvalNotes,
+      // Include radiologist's diagnosis
+      radiologistDiagnosis: analysis.radiologistDiagnosis,
+      // Final diagnosis is always the radiologist's selection
+      finalDiagnosis: analysis.radiologistDiagnosis,
     };
 
     console.log('Saving complete analysis data:', analysisData);
@@ -151,8 +187,47 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
     return;
   };
 
+  // Function to set the radiologist's diagnosis
+  const setRadiologistDiagnosis = (diagnosis: string) => {
+    setAnalysis(prev => ({
+      ...prev,
+      radiologistDiagnosis: diagnosis,
+      // Set approval status based on whether the radiologist agrees with the AI
+      approvalStatus: diagnosis === prev.prediction ? 'approved' : 'rejected',
+      approvalTimestamp: new Date().toISOString()
+    }));
+
+    console.log('Radiologist selected diagnosis:', diagnosis);
+  };
+
+  // Function to set the approval status (kept for backward compatibility)
+  const setApprovalStatus = (status: 'pending' | 'approved' | 'rejected', notes?: string) => {
+    setAnalysis(prev => ({
+      ...prev,
+      approvalStatus: status,
+      approvalTimestamp: new Date().toISOString(),
+      approvalNotes: notes || null,
+      // No longer automatically set radiologist's diagnosis to match AI prediction
+    }));
+  };
+
   const updateAnalysis = (data: any) => {
-    setAnalysis(prev => ({ ...prev, ...data }));
+    // If this is a new prediction (contains prediction field), reset the radiologist's diagnosis
+    if (data.prediction !== undefined) {
+      console.log('New prediction detected, resetting radiologist diagnosis');
+      setAnalysis(prev => ({
+        ...prev,
+        ...data,
+        // Reset radiologist's diagnosis to null when new results are displayed
+        radiologistDiagnosis: null,
+        // Reset approval status to pending
+        approvalStatus: 'pending',
+        approvalTimestamp: null,
+      }));
+    } else {
+      // For other updates, don't reset the radiologist's diagnosis
+      setAnalysis(prev => ({ ...prev, ...data }));
+    }
   };
 
   const addUploadedFile = (file: File) => {
@@ -170,10 +245,48 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const updateAnalysisState = (data: Partial<typeof analysis>) => {
-    setAnalysis(prev => ({
-      ...prev,
-      ...data
-    }));
+    // Debug log to see what data is being passed
+    console.log('updateAnalysisState called with data:', data);
+
+    // Check if this is a study being loaded (has prediction or imageUrl)
+    if (data.prediction !== undefined || data.imageUrl !== undefined) {
+      console.log('Loading study data');
+
+      // Check if the data contains a saved radiologist diagnosis
+      const hasSavedDiagnosis = data.radiologistDiagnosis !== undefined && data.radiologistDiagnosis !== null;
+
+      if (hasSavedDiagnosis) {
+        console.log('Found saved radiologist diagnosis:', data.radiologistDiagnosis);
+        // If there's a saved diagnosis, use it and preserve the approval status
+        setAnalysis(prev => ({
+          ...prev,
+          ...data,
+          // Explicitly set these values to ensure they're not overridden
+          radiologistDiagnosis: data.radiologistDiagnosis as string,
+          approvalStatus: (data.approvalStatus || 'pending') as 'pending' | 'approved' | 'rejected',
+          approvalTimestamp: data.approvalTimestamp || null,
+          approvalNotes: data.approvalNotes || null
+        }));
+      } else {
+        console.log('No saved radiologist diagnosis found, resetting to null');
+        // If there's no saved diagnosis, reset to null
+        setAnalysis(prev => ({
+          ...prev,
+          ...data,
+          // Reset radiologist's diagnosis when loading a new study without a saved diagnosis
+          radiologistDiagnosis: null,
+          // Reset approval status to pending
+          approvalStatus: 'pending',
+          approvalTimestamp: null,
+        }));
+      }
+    } else {
+      // For other updates, don't reset the radiologist's diagnosis
+      setAnalysis(prev => ({
+        ...prev,
+        ...data
+      }));
+    }
   };
 
   // Start the processing timer
@@ -243,7 +356,9 @@ export const AnalysisProvider: React.FC<{ children: ReactNode }> = ({ children }
         updateAnalysisState,
         startProcessingTimer,
         stopProcessingTimer,
-        updateElapsedTime
+        updateElapsedTime,
+        setApprovalStatus,
+        setRadiologistDiagnosis
       }}
     >
       {children}
