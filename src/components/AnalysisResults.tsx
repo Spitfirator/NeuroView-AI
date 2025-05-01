@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, Brain, Target, Calendar, ChevronRight, History, Download, Share2, Save, Clock, ChevronLeft, CheckCircle, HelpCircle } from 'lucide-react';
+import { AlertCircle, Brain, Target, Calendar, ChevronRight, Download, Share2, Save, Clock, ChevronLeft, CheckCircle, HelpCircle } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
-// Define the tumor type colors
+// define tumour type colors
 const TUMOR_COLORS = {
   glioma: 'bg-blue-600',
   meningioma: 'bg-blue-400',
@@ -10,7 +10,7 @@ const TUMOR_COLORS = {
   notumor: 'bg-green-500'
 } as const;
 
-// Define the desired order
+// define the desired order
 const TUMOR_ORDER = ['glioma', 'meningioma', 'pituitary', 'notumor'] as const;
 
 interface AnalysisResultsProps {
@@ -20,39 +20,32 @@ interface AnalysisResultsProps {
 export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
   const { analysis, saveAnalysisToPatient, currentPatientId, currentStudyId, stopProcessingTimer, setRadiologistDiagnosis } = useAnalysis();
 
-  // Helper function to show status (used for debugging)
-  // const getStudyLinkStatus = () => {
-  //   if (currentPatientId && currentStudyId) {
-  //     return `Linked to patient ID: ${currentPatientId.substring(0, 8)}... (Study: ${currentStudyId.substring(0, 8)}...)`;
-  //   }
-  //   return "Not linked to any patient study";
-  // };
 
   const handleExport = () => {
-    // In a real app, this would generate a PDF report
+    // need to implement for future, not for the report
     console.log('Exporting report...');
   };
 
   const handleShare = () => {
-    // In a real app, this would open a sharing modal
+    // same here
     console.log('Opening share dialog...');
   };
 
   const handleSaveAnalysis = async () => {
     try {
       await saveAnalysisToPatient();
-      // Show success notification
+      // show success notification
       alert('Analysis saved successfully to patient record!');
     } catch (error: any) {
       console.error('Failed to save analysis:', error);
-      // Show error notification
+      // show error notification
       alert(`Failed to save analysis: ${error.message || 'Unknown error'}`);
     }
   };
 
 
 
-  // Track the previous prediction
+  // track the previous prediction
   const [prevPrediction, setPrevPrediction] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,12 +54,12 @@ export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
     console.log('Processing duration:', analysis.processingDuration);
     console.log('Current elapsed time:', analysis.currentElapsedTime);
 
-    // If we have prediction results but no processing end time, stop the timer
+    // if we have prediction results but no processing end time, stop the timer
     if (analysis.prediction && !analysis.processingEndTime) {
       stopProcessingTimer();
     }
 
-    // Check if this is a new prediction
+    // check if this is a new prediction -> for subsequent MRI scans if for example the radiologist uploaded the wrong one, can still change
     const isNewPrediction = analysis.prediction && analysis.prediction !== prevPrediction;
 
     if (isNewPrediction) {
@@ -74,7 +67,7 @@ export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
       console.log('Previous prediction was:', prevPrediction);
       setPrevPrediction(analysis.prediction);
 
-      // Ensure the timer is stopped for the new prediction
+      // make sure the timer is stopped for the new prediction
       if (!analysis.processingEndTime) {
         stopProcessingTimer();
       }
@@ -102,7 +95,7 @@ export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
             <div>
               <h2 className="text-lg font-display font-semibold text-gray-900">Analysis Results</h2>
 
-              {/* Add status indicator showing patient/study link */}
+              {/* add status indicator showing patient/study link */}
               {currentPatientId && currentStudyId ? (
                 <p className="text-sm text-green-600 flex items-center mt-1">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
@@ -116,7 +109,7 @@ export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
               )}
             </div>
           </div>
-
+          {/* implement this after diss */}
           <div className="flex items-center space-x-3">
             <button
               onClick={handleShare}
@@ -138,7 +131,7 @@ export default function AnalysisResults({ onReturn }: AnalysisResultsProps) {
         <div className="space-y-8">
           <div className="border-b border-gray-100 pb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-gray-500">Tumor Classification</h3>
+              <h3 className="text-sm font-medium text-gray-500">Tumour Classification</h3>
               <div className="flex items-center">
                 {analysis.currentElapsedTime !== null && (
                   <div className="mr-4 text-sm text-gray-600 flex items-center">
@@ -149,10 +142,6 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
                     </span>
                   </div>
                 )}
-                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center">
-                  <History className="h-4 w-4 mr-1" />
-                  View History
-                </button>
               </div>
             </div>
 
@@ -162,7 +151,7 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
                 <h4 className="text-sm font-medium text-gray-700">
                   {analysis.radiologistDiagnosis && analysis.radiologistDiagnosis !== analysis.prediction
                     ? "Diagnosis:"
-                    : "AI Predicted Tumor Type:"}
+                    : "AI Predicted Tumour Type:"}
                 </h4>
 
                 {/* Status indicator */}
@@ -198,8 +187,8 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
                 } rounded-full mr-2`}></span>
                 <span className="text-lg font-semibold text-gray-900">
                   {analysis.radiologistDiagnosis && analysis.radiologistDiagnosis !== analysis.prediction
-                    ? (analysis.radiologistDiagnosis === 'notumor' ? 'No Tumor' : analysis.radiologistDiagnosis.charAt(0).toUpperCase() + analysis.radiologistDiagnosis.slice(1))
-                    : (analysis.prediction === 'notumor' ? 'No Tumor' : analysis.prediction?.charAt(0).toUpperCase() + analysis.prediction?.slice(1))
+                    ? (analysis.radiologistDiagnosis === 'notumor' ? 'No detectable Tumour' : analysis.radiologistDiagnosis.charAt(0).toUpperCase() + analysis.radiologistDiagnosis.slice(1))
+                    : (analysis.prediction === 'notumor' ? 'No detectable Tumour' : analysis.prediction?.charAt(0).toUpperCase() + analysis.prediction?.slice(1))
                   }
                 </span>
 
@@ -237,7 +226,7 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
                   <div className="flex items-center space-x-2">
                     <span className={`w-2 h-2 ${TUMOR_COLORS[label]} rounded-full`}></span>
                     <span className="text-sm font-medium text-gray-900">
-                      {label === 'notumor' ? 'No Tumor' : label.charAt(0).toUpperCase() + label.slice(1)}
+                      {label === 'notumor' ? 'No detectable Tumour' : label.charAt(0).toUpperCase() + label.slice(1)}
                     </span>
                     <div className="flex space-x-1">
                       {label === analysis.prediction && (
@@ -348,7 +337,7 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
                   <span>
                     {analysis.radiologistDiagnosis === analysis.prediction
                       ? 'AI diagnosis approved by radiologist'
-                      : `AI diagnosis rejected. Radiologist's diagnosis: ${analysis.radiologistDiagnosis === 'notumor' ? 'No Tumor' : analysis.radiologistDiagnosis.charAt(0).toUpperCase() + analysis.radiologistDiagnosis.slice(1)}`
+                      : `AI diagnosis rejected. Radiologist's diagnosis: ${analysis.radiologistDiagnosis === 'notumor' ? 'No detectable Tumour' : analysis.radiologistDiagnosis.charAt(0).toUpperCase() + analysis.radiologistDiagnosis.slice(1)}`
                     }
                   </span>
                 </div>
