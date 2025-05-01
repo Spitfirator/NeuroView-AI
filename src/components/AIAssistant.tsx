@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MessageSquare, Send, Loader2, Bot } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
-// API URLs - try all ports to support different development environments
+// API URLs for testing on different ports / environments 
 const API_URLS = ['http://localhost:8000', 'http://localhost:8001', 'http://localhost:8002'];
 
 interface Message {
@@ -17,9 +17,9 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  // Removed diagnosis state
 
-  // Create a system prompt string
+
+  // the system prompt string
   const getSystemPrompt = () => {
     return `You are an AI medical assistant with knowledge of medical terminology and procedures.
 
@@ -30,11 +30,11 @@ ${Object.entries(analysis.confidenceScores || {})
   .map(([type, score]) => `  * ${type}: ${(score * 100).toFixed(1)}%`)
   .join('\n')}
 
-Your role is to assist radiologists by providing general information about medical procedures, terminology, and answering questions they might have. Always maintain a professional, medical tone and clarify that you are not providing a diagnosis.`;
+Your role is to assist radiologists by providing general information about medical procedures, terminology, and answering questions they might have. Always maintain a professional, medical tone and remember that you are not providing a diagnosis.`;
   };
 
   const activateAssistant = () => {
-    // Initialize with welcome message
+    // we initialize with welcome message
     setMessages([
       {
         role: 'assistant',
@@ -43,7 +43,7 @@ Your role is to assist radiologists by providing general information about medic
       }
     ]);
 
-    // Don't set the system prompt in the input field
+    // we don't set the system prompt in the input field, just for testing purpose
     setInput('');
 
     setIsActivated(true);
@@ -64,9 +64,8 @@ Your role is to assist radiologists by providing general information about medic
     setIsLoading(true);
 
     try {
-      // Removed image handling code
 
-      // Get conversation history excluding system messages
+      // get conversation history excluding system messages
       const conversationHistory = messages
         .filter(msg => msg.role !== 'system')
         .map(({ role, content }) => ({
@@ -74,15 +73,15 @@ Your role is to assist radiologists by providing general information about medic
           content,
         }));
 
-      // If this is the first user message, add a system message at the beginning
-      if (messages.length === 1) { // Only the welcome message exists
+      // if this is the first user message, add a system message at the beginning
+      if (messages.length === 1) { // only welcome message exists
         conversationHistory.unshift({
           role: 'system',
           content: getSystemPrompt()
         });
       }
 
-      // Add the current user message
+      // add the current user message
       conversationHistory.push({
         role: 'user',
         content: input,
@@ -91,7 +90,7 @@ Your role is to assist radiologists by providing general information about medic
       let response;
       let success = false;
 
-      // Try each API URL until one works
+      // try each API URL until one works (to be flexible when we run backend on different ports)
       for (let i = 0; i < API_URLS.length; i++) {
         try {
           const currentUrl = API_URLS[i];
@@ -144,9 +143,9 @@ Your role is to assist radiologists by providing general information about medic
   };
 
   const formatMessage = (content: string) => {
-    // Split the message by newlines and handle lists
+    // split the message by newlines and handle lists
     return content.split('\n').map((line, index) => {
-      // Handle bullet points
+      // handle bullet points for display
       if (line.startsWith('- ')) {
         return (
           <li key={index} className="ml-4 list-disc">
@@ -154,7 +153,7 @@ Your role is to assist radiologists by providing general information about medic
           </li>
         );
       }
-      // Handle numbered lists
+      // handle numbered lists
       if (line.match(/^\d+\./)) {
         return (
           <li key={index} className="ml-4 list-decimal">
@@ -162,7 +161,7 @@ Your role is to assist radiologists by providing general information about medic
           </li>
         );
       }
-      // Handle confidence scores
+      // handle confidence scores
       if (line.startsWith('  * ')) {
         return (
           <li key={index} className="ml-8 list-none">
@@ -170,7 +169,7 @@ Your role is to assist radiologists by providing general information about medic
           </li>
         );
       }
-      // Handle headers (lines ending with ':')
+      // handle headers (lines ending with ':')
       if (line.endsWith(':')) {
         return (
           <p key={index} className="font-semibold mt-2 mb-1">
@@ -178,7 +177,7 @@ Your role is to assist radiologists by providing general information about medic
           </p>
         );
       }
-      // Regular paragraphs
+      // regular paragraphs
       return line ? (
         <p key={index} className="mb-2">
           {line}
@@ -188,7 +187,7 @@ Your role is to assist radiologists by providing general information about medic
       );
     });
   };
-
+  // we don't show the AI assistant until it's activated and we're clear with the user about ethical concerns (non-diagnostic, just assitive)
   if (!isActivated) {
     return (
       <div className="card backdrop-blur-sm bg-white/70 hover:bg-white/80 transition-all duration-300">
@@ -255,7 +254,6 @@ Your role is to assist radiologists by providing general information about medic
             </div>
           )}
 
-          {/* Diagnosis verification UI removed */}
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 border-t border-gray-100">

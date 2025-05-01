@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Calendar, Clock, FileText, Plus, UploadCloud, Brain, ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronLeft, Clock, FileText, Plus, UploadCloud, Brain, ChevronRight, Trash2 } from 'lucide-react';
 import { usePatients } from '../context/PatientContext';
 import NewStudyModal from './NewStudyModal';
 import { useAnalysis } from '../context/AnalysisContext';
@@ -163,10 +163,6 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="btn-secondary">
-            <Calendar className="h-4 w-4 mr-2" />
-            Schedule Visit
-          </button>
           <button
             className="btn"
             onClick={() => setIsNewStudyModalOpen(true)}
