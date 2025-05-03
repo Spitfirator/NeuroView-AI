@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, ChevronRight, Users, FileText, AlertCircle, BarChart, Clock, Trash2 } from 'lucide-react';
+import { Search, Plus, Filter, ChevronRight, Users, FileText, AlertCircle, BarChart, Clock, Trash2, Edit } from 'lucide-react';
 import { usePatients } from '../context/PatientContext';
 import NewPatientModal from './NewPatientModal';
+import EditPatientModal from './EditPatientModal';
 
 interface PatientListProps {
   onPatientSelect: (id: string) => void;
@@ -45,9 +46,11 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
+  const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
+  const [patientToEdit, setPatientToEdit] = useState<string | null>(null);
 
   // Get patients and patient management functions from context
-  const { patients, addPatient, removePatient } = usePatients();
+  const { patients, addPatient, updatePatient, removePatient } = usePatients();
 
   // State for confirmation dialog
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -59,33 +62,27 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
     patient.condition.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const resetPatientData = () => {
-    if (confirm('This will reset all study data but keep your patients. Continue?')) {
-      // Get current patients from localStorage
-      const savedPatients = localStorage.getItem('patients');
-      if (savedPatients) {
-        // Parse the patients and clear studies for each patient
-        const patients = JSON.parse(savedPatients);
-        const resetPatients = patients.map(patient => ({
-          ...patient,
-          studies: [] // Clear all studies
-        }));
-
-        // Save back to localStorage
-        localStorage.setItem('patients', JSON.stringify(resetPatients));
-        window.location.reload();
-      }
-    }
-  };
-
   // Handle saving a new patient
-  const handleSavePatient = (patientData) => {
+  const handleSavePatient = (patientData: any) => {
     addPatient(patientData);
     setIsNewPatientModalOpen(false);
   };
 
+  // Handle patient editing
+  const handleEditClick = (e: React.MouseEvent, patientId: string) => {
+    e.stopPropagation(); // Prevent triggering the parent onClick
+    setPatientToEdit(patientId);
+    setIsEditPatientModalOpen(true);
+  };
+
+  const handleUpdatePatient = (patientId: string, patientData: any) => {
+    updatePatient(patientId, patientData);
+    setIsEditPatientModalOpen(false);
+    setPatientToEdit(null);
+  };
+
   // Handle patient deletion
-  const handleDeleteClick = (e, patientId) => {
+  const handleDeleteClick = (e: React.MouseEvent, patientId: string) => {
     e.stopPropagation(); // Prevent triggering the parent onClick
     setPatientToDelete(patientId);
     setShowDeleteConfirmation(true);
@@ -129,7 +126,7 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
               <Users className="h-5 w-5 text-blue-600" />
               <h3 className="text-sm font-medium text-gray-500">Today's Patients</h3>
             </div>
-            <span className="text-2xl font-semibold text-gray-900">24</span>
+            <span className="text-2xl font-semibold text-gray-900">3</span>
           </div>
         </div>
 
@@ -139,7 +136,7 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
               <FileText className="h-5 w-5 text-orange-600" />
               <h3 className="text-sm font-medium text-gray-500">Pending Reports</h3>
             </div>
-            <span className="text-2xl font-semibold text-gray-900">8</span>
+            <span className="text-2xl font-semibold text-gray-900">0</span>
           </div>
         </div>
 
@@ -149,7 +146,7 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
               <AlertCircle className="h-5 w-5 text-red-600" />
               <h3 className="text-sm font-medium text-gray-500">Critical Cases</h3>
             </div>
-            <span className="text-2xl font-semibold text-gray-900">3</span>
+            <span className="text-2xl font-semibold text-gray-900">2</span>
           </div>
         </div>
 
@@ -159,7 +156,7 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
               <BarChart className="h-5 w-5 text-green-600" />
               <h3 className="text-sm font-medium text-gray-500">Completed Today</h3>
             </div>
-            <span className="text-2xl font-semibold text-gray-900">13</span>
+            <span className="text-2xl font-semibold text-gray-900">1</span>
           </div>
         </div>
       </div>
@@ -261,6 +258,13 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
                             {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
                           </span>
                           <button
+                            onClick={(e) => handleEditClick(e, patient.id)}
+                            className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-blue-50"
+                            title="Edit patient"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={(e) => handleDeleteClick(e, patient.id)}
                             className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
                             title="Delete patient"
@@ -319,18 +323,22 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
         </div>
       </div>
 
-      <button
-        onClick={resetPatientData}
-        className="text-xs text-red-600 hover:text-red-800"
-      >
-        Reset Data
-      </button>
-
       {/* New Patient Modal */}
       <NewPatientModal
         isOpen={isNewPatientModalOpen}
         onClose={() => setIsNewPatientModalOpen(false)}
         onSave={handleSavePatient}
+      />
+
+      {/* Edit Patient Modal */}
+      <EditPatientModal
+        isOpen={isEditPatientModalOpen}
+        onClose={() => {
+          setIsEditPatientModalOpen(false);
+          setPatientToEdit(null);
+        }}
+        onSave={handleUpdatePatient}
+        patient={patientToEdit ? patients.find(p => p.id === patientToEdit) || null : null}
       />
 
       {/* Delete Confirmation Dialog */}

@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 import io
 import cv2
-from typing import List, Dict, Optional
+from typing import List, Dict
 from datetime import datetime
 from tensorflow.keras.applications.resnet50 import preprocess_input
 from openai import OpenAI
@@ -34,7 +34,7 @@ app.add_middleware(
 # Include the patient router
 app.include_router(patient_router)
 
-# Load the model we trained on Kaggle dataset 
+# Load the model we trained on Kaggle dataset
 model = tf.keras.models.load_model('app/models/Bmodel_v2.keras')
 
 # Labels
@@ -55,7 +55,6 @@ class Message(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: List[Dict[str, str]]
-    image: Optional[str] = None
     max_tokens: int = 500
 
 def preprocess_image(image_bytes):
@@ -63,19 +62,19 @@ def preprocess_image(image_bytes):
     # Convert bytes to OpenCV
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    
+
     # Resize to match model input size
     img = cv2.resize(img, (224, 224))
-    
+
     # Convert BGR to RGB (OpenCV loads in BGR, ResNet expects RGB)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    
+
     # Convert to float32 and expand dimensions
     img_array = np.expand_dims(img.astype(np.float32), axis=0)
-    
+
     # Apply ResNet50 preprocessing
     img_array = preprocess_input(img_array)
-    
+
     return img_array
 
 @app.post("/predict")
@@ -98,26 +97,26 @@ async def predict(
         try:
             # Generate GradCAM visualization
             original, heatmap, superimposed = generate_gradcam(
-                model, 
+                model,
                 img_array,
                 pred_index=predicted_idx,
                 target_layer_name=target_layer
             )
-            
+
             # Deprocess the original image for visualization
             original = deprocess_image(original)
-            
+
             # Encode images to base64
             heatmap_b64 = encode_image(heatmap)
             superimposed_b64 = encode_image(superimposed)
-            
+
             print("GradCAM generated successfully")
-            
+
             return JSONResponse({
                 "success": True,
                 "prediction": predicted_class,
                 "confidence_scores": {
-                    label: float(score) 
+                    label: float(score)
                     for label, score in zip(LABELS, predictions[0])
                 },
                 "gradcam": {
@@ -125,7 +124,7 @@ async def predict(
                     "superimposed": superimposed_b64
                 }
             })
-            
+
         except Exception as grad_error:
             print(f"GradCAM generation failed: {str(grad_error)}")
             # Return prediction without GradCAM if it fails
@@ -133,11 +132,11 @@ async def predict(
                 "success": True,
                 "prediction": predicted_class,
                 "confidence_scores": {
-                    label: float(score) 
+                    label: float(score)
                     for label, score in zip(LABELS, predictions[0])
                 }
             })
-            
+
     except Exception as e:
         print(f"Prediction failed: {str(e)}")  # Debug log
         return JSONResponse({
@@ -156,22 +155,22 @@ async def get_similar_cases(case_type: str):
     try:
         # Filter cases by prediction type
         similar_cases = [
-            case for case in case_database 
+            case for case in case_database
             if case["prediction"] == case_type
         ]
-        
+
         # Sort by confidence score for that type
         similar_cases.sort(
-            key=lambda x: x["confidence_scores"][case_type], 
+            key=lambda x: x["confidence_scores"][case_type],
             reverse=True
         )
-        
+
         # Return top 5 cases
         return JSONResponse({
             "success": True,
             "cases": similar_cases[:5]
         })
-        
+
     except Exception as e:
         return JSONResponse({
             "success": False,
@@ -183,35 +182,8 @@ async def chat(request: ChatRequest):
     try:
         messages = request.messages
 
-        # If there's an image, format it properly for the vision model
-        if request.image:
-            # Find the last user message
-            for i in reversed(range(len(messages))):
-                if messages[i]["role"] == "user":
-                    # Format the message for vision model
-                    messages[i] = {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": messages[i]["content"]
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{request.image}",
-                                    "detail": "high"  # Use high detail for medical images
-                                }
-                            }
-                        ]
-                    }
-                    break
-            
-            # Use vision-capable model
-            model_name = "gpt-4o-mini"
-        else:
-            # Use text-only model
-            model_name = "gpt-4o-mini"
+        # Use text-only model
+        model_name = "gpt-4o-mini"
 
         # Make the API call
         response = client.chat.completions.create(
