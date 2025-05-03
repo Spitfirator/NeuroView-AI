@@ -1,5 +1,5 @@
 import React from 'react';
-import { Brain, Bell, Settings, User, Search } from 'lucide-react';
+import {Bell, Settings, User, Search } from 'lucide-react';
 
 export default function Header() {
   return (
@@ -18,7 +18,7 @@ export default function Header() {
             <div className="hidden lg:flex lg:ml-10">
               <div className="flex space-x-4">
                 <a href="#" className="px-3 py-2 text-sm font-medium text-gray-900">Dashboard</a>
-                <a href="#" className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-900">Studies</a>
+                <a href="#" className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-900">Research Study</a>
               </div>
             </div>
           </div>

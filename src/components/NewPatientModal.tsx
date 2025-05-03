@@ -18,6 +18,9 @@ interface PatientFormData {
   policyNumber: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  medicalHistory: string;
+  medications: string;
+  allergies: string;
 }
 
 const initialFormData: PatientFormData = {
@@ -31,6 +34,9 @@ const initialFormData: PatientFormData = {
   policyNumber: '',
   emergencyContactName: '',
   emergencyContactPhone: '',
+  medicalHistory: '',
+  medications: '',
+  allergies: '',
 };
 
 export default function NewPatientModal({ isOpen, onClose, onSave }: NewPatientModalProps) {
@@ -231,7 +237,60 @@ export default function NewPatientModal({ isOpen, onClose, onSave }: NewPatientM
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-6">
+          <div className="col-span-2 mt-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Medical Information</h3>
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label htmlFor="medicalHistory" className="block text-sm font-medium text-gray-700 mb-1">
+                  Medical History
+                </label>
+                <textarea
+                  id="medicalHistory"
+                  name="medicalHistory"
+                  value={formData.medicalHistory}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter medical history (separate items with commas)"
+                  rows={3}
+                />
+                <p className="mt-1 text-xs text-gray-500">Separate multiple conditions with commas (e.g., "Hypertension, Diabetes, Asthma")</p>
+              </div>
+
+              <div>
+                <label htmlFor="medications" className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Medications
+                </label>
+                <textarea
+                  id="medications"
+                  name="medications"
+                  value={formData.medications}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter current medications (separate items with commas)"
+                  rows={3}
+                />
+                <p className="mt-1 text-xs text-gray-500">Separate multiple medications with commas (e.g., "Lisinopril 10mg, Metformin 500mg")</p>
+              </div>
+
+              <div>
+                <label htmlFor="allergies" className="block text-sm font-medium text-gray-700 mb-1">
+                  Allergies
+                </label>
+                <textarea
+                  id="allergies"
+                  name="allergies"
+                  value={formData.allergies}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter allergies (separate items with commas) or 'No known allergies'"
+                  rows={2}
+                />
+                <p className="mt-1 text-xs text-gray-500">Separate multiple allergies with commas or enter "No known allergies"</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-6 col-span-2">
             <button
               type="button"
               onClick={onClose}
@@ -250,4 +309,4 @@ export default function NewPatientModal({ isOpen, onClose, onSave }: NewPatientM
       </div>
     </div>
   );
-} 
+}

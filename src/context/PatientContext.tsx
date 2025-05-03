@@ -53,6 +53,7 @@ interface PatientContextType {
   addStudy: (patientId: string, study: Omit<Study, 'id'>) => Promise<void>;
   removeStudy: (patientId: string, studyId: string) => Promise<void>;
   addPatient: (patientData: PatientFormData) => Promise<void>;
+  updatePatient: (patientId: string, patientData: PatientFormData) => Promise<void>;
   removePatient: (patientId: string) => Promise<void>;
   updateStudyAnalysis: (patientId: string, studyId: string, analysisData: any) => Promise<any>;
   isLoading: boolean;
@@ -340,6 +341,19 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       // Format emergency contact
       const emergencyContact = `${patientData.emergencyContactName} - ${patientData.emergencyContactPhone}`;
 
+      // Process comma-separated strings into arrays
+      const medicalHistoryArray = patientData.medicalHistory ?
+        patientData.medicalHistory.split(',').map(item => item.trim()).filter(item => item) :
+        [];
+
+      const medicationsArray = patientData.medications ?
+        patientData.medications.split(',').map(item => item.trim()).filter(item => item) :
+        [];
+
+      const allergiesArray = patientData.allergies ?
+        patientData.allergies.split(',').map(item => item.trim()).filter(item => item) :
+        [];
+
       // Create a new patient object for the API (snake_case)
       const apiPatient = {
         name: patientData.fullName,
@@ -353,9 +367,9 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         insurance: patientData.insuranceProvider,
         policy_number: patientData.policyNumber,
         emergency_contact: emergencyContact,
-        medical_history: [],
-        medications: [],
-        allergies: [],
+        medical_history: medicalHistoryArray,
+        medications: medicationsArray,
+        allergies: allergiesArray,
         status: 'scheduled',
         condition: 'Initial Consultation'
       };
@@ -516,6 +530,119 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
+  const updatePatient = async (patientId: string, patientData: PatientFormData) => {
+    try {
+      setIsLoading(true);
+
+      // Get the existing patient to preserve studies
+      const existingPatient = patients.find(p => p.id === patientId);
+      if (!existingPatient) {
+        throw new Error('Patient not found');
+      }
+
+      // Calculate age based on date of birth
+      const birthDate = new Date(patientData.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+
+      // Format emergency contact
+      const emergencyContact = `${patientData.emergencyContactName} - ${patientData.emergencyContactPhone}`;
+
+      // Process comma-separated strings into arrays
+      const medicalHistoryArray = patientData.medicalHistory ?
+        patientData.medicalHistory.split(',').map(item => item.trim()).filter(item => item) :
+        [];
+
+      const medicationsArray = patientData.medications ?
+        patientData.medications.split(',').map(item => item.trim()).filter(item => item) :
+        [];
+
+      const allergiesArray = patientData.allergies ?
+        patientData.allergies.split(',').map(item => item.trim()).filter(item => item) :
+        [];
+
+      // Create a patient object for the API (snake_case)
+      const apiPatient = {
+        name: patientData.fullName,
+        age,
+        gender: patientData.gender.charAt(0).toUpperCase() + patientData.gender.slice(1),
+        last_visit: existingPatient.lastVisit, // Preserve last visit date
+        date_of_birth: patientData.dateOfBirth,
+        phone: patientData.phone,
+        email: patientData.email,
+        address: patientData.address,
+        insurance: patientData.insuranceProvider,
+        policy_number: patientData.policyNumber,
+        emergency_contact: emergencyContact,
+        medical_history: medicalHistoryArray,
+        medications: medicationsArray,
+        allergies: allergiesArray,
+        status: existingPatient.status, // Preserve status
+        condition: existingPatient.condition // Preserve condition
+      };
+
+      let response;
+      let success = false;
+
+      // Try each API URL until one works
+      for (let i = 0; i < API_URLS.length; i++) {
+        try {
+          const currentUrl = API_URLS[i];
+          console.log(`Trying to update patient using: ${currentUrl}`);
+
+          response = await fetch(`${currentUrl}/patients/${patientId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(apiPatient),
+          });
+
+          if (response.ok) {
+            // Update the current API URL if it's different
+            if (currentUrl !== API_BASE_URL) {
+              currentApiUrlIndex = i;
+              API_BASE_URL = currentUrl;
+              console.log(`Switched to working API URL: ${API_BASE_URL}`);
+            }
+            success = true;
+            break;
+          }
+        } catch (err: any) {
+          console.log(`Failed to connect to ${API_URLS[i]}: ${err.message || 'Unknown error'}`);
+        }
+      }
+
+      if (!success || !response) {
+        throw new Error('Failed to update patient on any API endpoint');
+      }
+
+      const updatedApiPatient = await response.json();
+
+      // Transform the API response to match frontend model
+      const updatedPatient = transformPatient(updatedApiPatient);
+
+      // Update local state
+      setPatients(prevPatients =>
+        prevPatients.map(patient =>
+          patient.id === patientId ? updatedPatient : patient
+        )
+      );
+
+      setError(null);
+    } catch (err: any) {
+      console.error('Error updating patient:', err);
+      setError('Failed to update patient. Please try again later.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const removePatient = async (patientId: string) => {
     try {
       setIsLoading(true);
@@ -571,6 +698,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       addStudy,
       removeStudy,
       addPatient,
+      updatePatient,
       removePatient,
       updateStudyAnalysis,
       isLoading,

@@ -43,6 +43,9 @@ class PatientBase(BaseModel):
 class PatientCreate(PatientBase):
     pass
 
+class PatientUpdate(PatientBase):
+    pass
+
 class PatientResponse(PatientBase):
     id: str
     studies: List[StudyResponse]
@@ -183,6 +186,37 @@ def create_patient(patient: PatientCreate, db: Session = Depends(get_db)):
     db.refresh(db_patient)
 
     # Return the created patient
+    return get_patient(patient_id, db)
+
+@router.put("/{patient_id}", response_model=PatientResponse)
+def update_patient(patient_id: str, patient: PatientUpdate, db: Session = Depends(get_db)):
+    # Find patient
+    db_patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not db_patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Update patient fields
+    db_patient.name = patient.name
+    db_patient.age = patient.age
+    db_patient.gender = patient.gender
+    db_patient.last_visit = patient.last_visit
+    db_patient.date_of_birth = patient.date_of_birth
+    db_patient.phone = patient.phone
+    db_patient.email = patient.email
+    db_patient.address = patient.address
+    db_patient.insurance = patient.insurance
+    db_patient.policy_number = patient.policy_number
+    db_patient.emergency_contact = patient.emergency_contact
+    db_patient.status = patient.status
+    db_patient.condition = patient.condition
+    db_patient.medical_history = json.dumps(patient.medical_history)
+    db_patient.medications = json.dumps(patient.medications)
+    db_patient.allergies = json.dumps(patient.allergies)
+
+    db.commit()
+    db.refresh(db_patient)
+
+    # Return the updated patient
     return get_patient(patient_id, db)
 
 @router.post("/{patient_id}/studies", response_model=StudyResponse)
