@@ -11,7 +11,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-# Database models
+# database models
 class Patient(Base):
     __tablename__ = "patients"
 
@@ -30,10 +30,10 @@ class Patient(Base):
     status = Column(String)
     condition = Column(String)
     
-    # Relationship with studies
+    # relationship with studies
     studies = relationship("Study", back_populates="patient", cascade="all, delete-orphan")
     
-    # JSON columns (stored as TEXT in SQLite)
+    # JSON columns (stored as TEXT for SQLite)
     medical_history = Column(Text)  
     medications = Column(Text)     
     allergies = Column(Text)        
@@ -48,10 +48,10 @@ class Study(Base):
     status = Column(String)
     findings = Column(Text)
     thumbnail_url = Column(String)
-    analysis_data = Column(Text)  # This will store the analysis results as JSON
+    analysis_data = Column(Text)  # store the analysis results as JSON
     
-    # Relationship with patient
+    # relationship with patient
     patient = relationship("Patient", back_populates="studies")
 
-# Create all tables
+# create all tables
 Base.metadata.create_all(bind=engine) 

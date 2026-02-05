@@ -6,20 +6,20 @@ export default function GradCAMViewer() {
   const { analysis } = useAnalysis();
   const [showHeatmap, setShowHeatmap] = useState(true);
 
-  // Check for gradcam data in either format
+  // check for gradcam data in either format
   const hasGradcam = analysis.gradcam || analysis.gradcamUrl;
   
   if (!hasGradcam) {
     return null;
   }
 
-  // Determine the image source based on what's available
+  // determine the image source based on what's available
   let imageSrc;
   if (analysis.gradcam) {
-    // Handle the gradcam object with base64 data
+    // handle the gradcam object with base64 data
     imageSrc = `data:image/png;base64,${showHeatmap ? analysis.gradcam.superimposed : analysis.gradcam.heatmap}`;
   } else if (analysis.gradcamUrl) {
-    // Handle direct URL (though note that blob URLs won't persist across sessions)
+    // handle direct URL 
     imageSrc = analysis.gradcamUrl;
   }
 

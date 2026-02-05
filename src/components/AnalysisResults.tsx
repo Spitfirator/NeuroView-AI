@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertCircle, Brain, Target, Calendar, ChevronRight, Download, Share2, Save, Clock, ChevronLeft, CheckCircle, HelpCircle } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
-// define tumour type colors
+// define tumour type colours
 const TUMOR_COLORS = {
   glioma: 'bg-blue-600',
   meningioma: 'bg-blue-400',
@@ -145,7 +145,7 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
               </div>
             </div>
 
-            {/* Prominent display of the predicted tumor type */}
+            {/* prominent display of the predicted tumour type */}
             <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
               <div className="flex justify-between items-start mb-2">
                 <h4 className="text-sm font-medium text-gray-700">
@@ -154,7 +154,7 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
                     : "AI Predicted Tumour Type:"}
                 </h4>
 
-                {/* Status indicator */}
+                {/* status indicator */}
                 {analysis.radiologistDiagnosis ? (
                   <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                     analysis.radiologistDiagnosis === analysis.prediction
@@ -179,7 +179,7 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
               </div>
 
               <div className="flex items-center mt-3">
-                {/* Show the radiologist's diagnosis if available and different from AI, otherwise show AI prediction */}
+                {/* show the radiologist's diagnosis if available and different from AI, otherwise show AI prediction */}
                 <span className={`w-3 h-3 ${
                   analysis.radiologistDiagnosis && analysis.radiologistDiagnosis !== analysis.prediction
                     ? TUMOR_COLORS[analysis.radiologistDiagnosis as keyof typeof TUMOR_COLORS]
@@ -192,7 +192,7 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
                   }
                 </span>
 
-                {/* Only show confidence for AI prediction */}
+                {/* only show confidence for AI prediction */}
                 {(!analysis.radiologistDiagnosis || analysis.radiologistDiagnosis === analysis.prediction) && (
                   <span className="ml-3 text-sm font-medium text-gray-700">
                     ({((analysis.confidenceScores[analysis.prediction as string] || 0) * 100).toFixed(1)}% AI confidence)
@@ -252,7 +252,7 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
               ))}
             </div>
           </div>
-
+              {/* need to implement that in the future — part of disucssion section, currently hardcoded */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-6">
               <div className="flex items-start space-x-3">
@@ -297,18 +297,18 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
 
               <div className="flex items-start space-x-3">
                 <div className="mt-1">
-                  {/* Change icon color based on tumor presence */}
+                  {/* change icon colour based on tumor presence */}
                   <AlertCircle className={`h-5 w-5 ${analysis.prediction && analysis.prediction !== 'notumor' ? 'text-red-500' : 'text-green-500'}`} />
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-900">Critical Findings</h4>
-                  {/* Change message based on tumor presence */}
+                  {/* change message based on tumor presence */}
                   <p className="mt-1 text-sm text-gray-600">
                     {analysis.prediction && analysis.prediction !== 'notumor'
                       ? 'Mass effect on surrounding structures'
                       : 'No mass effect on surrounding structures'}
                   </p>
-                  {/* Change alert box based on tumor presence */}
+                  {/* change alert box based on tumour presence */}
                   <div className={`mt-2 p-2 ${analysis.prediction && analysis.prediction !== 'notumor' ? 'bg-red-50 border border-red-100' : 'bg-green-50 border border-green-100'} rounded-lg`}>
                     <p className={`text-xs ${analysis.prediction && analysis.prediction !== 'notumor' ? 'text-red-700' : 'text-green-700'}`}>
                       {analysis.prediction && analysis.prediction !== 'notumor'
@@ -322,7 +322,7 @@ ${analysis.processingEndTime ? `Processing completed at: ${new Date(analysis.pro
           </div>
         </div>
 
-        {/* Add save button at the bottom when linked to patient */}
+        {/* add save button at the bottom when linked to patient */}
         {currentPatientId && currentStudyId && (
           <div className="mt-6 flex justify-between items-center">
             <div className="text-sm text-gray-600">

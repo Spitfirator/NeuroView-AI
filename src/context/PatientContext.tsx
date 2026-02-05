@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// Define types
+// define types
 export interface Study {
   id: string;
   date: string;
@@ -32,7 +32,7 @@ export interface Patient {
   studies: Study[];
 }
 
-// Patient form data interface
+// patient form data interface
 export interface PatientFormData {
   fullName: string;
   dateOfBirth: string;
@@ -46,7 +46,7 @@ export interface PatientFormData {
   emergencyContactPhone: string;
 }
 
-// Context type
+// context type
 interface PatientContextType {
   patients: Patient[];
   getPatient: (id: string) => Patient | undefined;
@@ -60,23 +60,23 @@ interface PatientContextType {
   error: string | null;
 }
 
-// API URLs - try both ports to support different development environments
+// API URLs - all 3 for tests 
 const API_URLS = ['http://localhost:8000', 'http://localhost:8001', 'http://localhost:8002'];
 let currentApiUrlIndex = 0;
 let API_BASE_URL = API_URLS[currentApiUrlIndex];
 
-// We're handling API URL switching directly in the fetch functions
 
-// Create context
+
+// create context
 const PatientContext = createContext<PatientContextType | undefined>(undefined);
 
-// Provider component
+// provider component
 export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Add this function to transform the API response to match your frontend model
+  // function to transform the API response to match frontend model
   const transformPatient = (apiPatient: any): Patient => {
     return {
       id: apiPatient.id,
@@ -97,10 +97,10 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       status: apiPatient.status as 'scheduled' | 'in-progress' | 'completed',
       condition: apiPatient.condition,
       studies: (apiPatient.studies || []).map((apiStudy: any) => {
-        // Parse analysis_data if it exists
+        // parse analysis_data if it exists
         let analysisData = null;
         if (apiStudy.analysis_data) {
-          // Make sure we're dealing with an object, not a string
+          // make sure we're dealing with an object, not a string
           if (typeof apiStudy.analysis_data === 'string') {
             try {
               analysisData = JSON.parse(apiStudy.analysis_data);
@@ -125,7 +125,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   };
 
-  // Fetch patients on component mount
+  // fetch patients on component mount
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -133,7 +133,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         let response;
         let success = false;
 
-        // Try each API URL until one works
+        // try each API URL until one works in case we run backend on different port
         for (let i = 0; i < API_URLS.length; i++) {
           try {
             const currentUrl = API_URLS[i];
@@ -141,7 +141,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
             response = await fetch(`${currentUrl}/patients`);
 
             if (response.ok) {
-              // Update the current API URL if it's different
+              // update the current API URL if it's different
               if (currentUrl !== API_BASE_URL) {
                 currentApiUrlIndex = i;
                 API_BASE_URL = currentUrl;
@@ -162,7 +162,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         const data = await response.json();
         console.log('API returned patients:', data);
 
-        // Transform the data to match our frontend model
+        // transform the data to match our frontend model
         const transformedPatients = data.map(transformPatient);
         console.log('Transformed patients:', transformedPatients);
 
@@ -187,7 +187,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     try {
       setIsLoading(true);
 
-      // Transform from camelCase to snake_case for API
+      // transform from camelCase to snake_case for API
       const apiStudy = {
         type: study.type,
         date: study.date,
@@ -199,7 +199,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       let response;
       let success = false;
 
-      // Try each API URL until one works
+      // try each API URL until one works
       for (let i = 0; i < API_URLS.length; i++) {
         try {
           const currentUrl = API_URLS[i];
@@ -214,7 +214,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
           });
 
           if (response.ok) {
-            // Update the current API URL if it's different
+            // update the current API URL if it's different
             if (currentUrl !== API_BASE_URL) {
               currentApiUrlIndex = i;
               API_BASE_URL = currentUrl;
@@ -234,7 +234,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       const newApiStudy = await response.json();
 
-      // Transform the returned study to frontend format
+      // transform the returned study to frontend format
       const newStudy = {
         id: newApiStudy.id,
         date: newApiStudy.date,
@@ -244,7 +244,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         thumbnailUrl: newApiStudy.thumbnail_url
       };
 
-      // Update local state
+      // update local state
       setPatients(prevPatients => {
         return prevPatients.map(patient => {
           if (patient.id === patientId) {
@@ -273,7 +273,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       let response;
       let success = false;
 
-      // Try each API URL until one works
+      // try each API URL until one of them works
       for (let i = 0; i < API_URLS.length; i++) {
         try {
           const currentUrl = API_URLS[i];
@@ -284,7 +284,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
           });
 
           if (response.ok) {
-            // Update the current API URL if it's different
+            // update the current API URL if it's different
             if (currentUrl !== API_BASE_URL) {
               currentApiUrlIndex = i;
               API_BASE_URL = currentUrl;
@@ -302,7 +302,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         throw new Error('Failed to remove study from any API endpoint');
       }
 
-      // Update local state
+      // update local state
       setPatients(prevPatients => {
         return prevPatients.map(patient => {
           if (patient.id === patientId) {
@@ -329,7 +329,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     try {
       setIsLoading(true);
 
-      // Calculate age based on date of birth
+      // calculate age based on date of birth
       const birthDate = new Date(patientData.dateOfBirth);
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
@@ -338,10 +338,10 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         age--;
       }
 
-      // Format emergency contact
+      // format emergency contact
       const emergencyContact = `${patientData.emergencyContactName} - ${patientData.emergencyContactPhone}`;
 
-      // Process comma-separated strings into arrays
+      // process comma-separated strings into arrays
       const medicalHistoryArray = patientData.medicalHistory ?
         patientData.medicalHistory.split(',').map(item => item.trim()).filter(item => item) :
         [];
@@ -354,7 +354,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         patientData.allergies.split(',').map(item => item.trim()).filter(item => item) :
         [];
 
-      // Create a new patient object for the API (snake_case)
+      // create a new patient object for the API (snake_case)
       const apiPatient = {
         name: patientData.fullName,
         age,
@@ -377,7 +377,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       let response;
       let success = false;
 
-      // Try each API URL until one works
+      // we try each API URL until one of them works
       for (let i = 0; i < API_URLS.length; i++) {
         try {
           const currentUrl = API_URLS[i];
@@ -392,7 +392,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
           });
 
           if (response.ok) {
-            // Update the current API URL if it's different
+            // update the current API URL if it's different
             if (currentUrl !== API_BASE_URL) {
               currentApiUrlIndex = i;
               API_BASE_URL = currentUrl;
@@ -412,10 +412,10 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       const createdApiPatient = await response.json();
 
-      // Transform the API response to match frontend model
+      // transform the API response to match frontend model
       const createdPatient = transformPatient(createdApiPatient);
 
-      // Update local state
+      // update local state
       setPatients(prevPatients => [...prevPatients, createdPatient]);
       setError(null);
     } catch (err: any) {
@@ -433,23 +433,23 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       console.log('Saving analysis data to backend:', analysisData);
 
-      // Create the data to be saved - include both the original image and gradcam data
+      // create the data to be saved - we includeboth the original image and gradcam data
       const dataToSave = {
         prediction: analysisData.prediction,
         confidenceScores: analysisData.confidenceScores,
         gradcam: analysisData.gradcam,
-        // Use the correct property name that matches what's in analysisData
+        // use tcorrect property name that matches what's in analysisData
         originalImage: analysisData.originalImage || null,
-        // Remove this if we're no longer using blob URLs
+
         // imageUrl: analysisData.imageUrl,
         uploadedFileNames: analysisData.uploadedFileNames || [],
         timestamp: analysisData.timestamp || new Date().toISOString(),
-        // Save processing time information
+        // save processing time information
         processingStartTime: analysisData.processingStartTime || null,
         processingEndTime: analysisData.processingEndTime || null,
         processingDuration: analysisData.processingDuration || null,
         currentElapsedTime: analysisData.currentElapsedTime || analysisData.processingDuration || null,
-        // Include radiologist's diagnosis and approval status
+        // include radiologist's diagnosis and approval status
         radiologistDiagnosis: analysisData.radiologistDiagnosis || null,
         approvalStatus: analysisData.approvalStatus || 'pending',
         approvalTimestamp: analysisData.approvalTimestamp || null,
@@ -460,7 +460,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       let response;
       let success = false;
 
-      // Try each API URL until one works
+      // we try each API URL until one works
       for (let i = 0; i < API_URLS.length; i++) {
         try {
           const currentUrl = API_URLS[i];
@@ -475,7 +475,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
           });
 
           if (response.ok) {
-            // Update the current API URL if it's different
+            // update the current API URL if it's different
             if (currentUrl !== API_BASE_URL) {
               currentApiUrlIndex = i;
               API_BASE_URL = currentUrl;
@@ -496,7 +496,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       const result = await response.json();
       console.log('Backend response:', result);
 
-      // Update local state
+      // update local state
       setPatients(prevPatients => {
         return prevPatients.map(patient => {
           if (patient.id === patientId) {
@@ -508,7 +508,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
                   return {
                     ...study,
                     status: result.status as 'scheduled' | 'in-progress' | 'completed',
-                    analysisData: dataToSave  // Save the modified data with original image
+                    analysisData: dataToSave  // save the modified data with original image
                   };
                 }
                 return study;
@@ -534,13 +534,13 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     try {
       setIsLoading(true);
 
-      // Get the existing patient to preserve studies
+      // get the existing patient to preserve studies
       const existingPatient = patients.find(p => p.id === patientId);
       if (!existingPatient) {
         throw new Error('Patient not found');
       }
 
-      // Calculate age based on date of birth
+      // calculate age based on date of birth
       const birthDate = new Date(patientData.dateOfBirth);
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
@@ -549,10 +549,10 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         age--;
       }
 
-      // Format emergency contact
+      // format emergency contact
       const emergencyContact = `${patientData.emergencyContactName} - ${patientData.emergencyContactPhone}`;
 
-      // Process comma-separated strings into arrays
+      // process comma-separated strings into arrays
       const medicalHistoryArray = patientData.medicalHistory ?
         patientData.medicalHistory.split(',').map(item => item.trim()).filter(item => item) :
         [];
@@ -565,12 +565,12 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         patientData.allergies.split(',').map(item => item.trim()).filter(item => item) :
         [];
 
-      // Create a patient object for the API (snake_case)
+      // create a patient object for the API (snake_case)
       const apiPatient = {
         name: patientData.fullName,
         age,
         gender: patientData.gender.charAt(0).toUpperCase() + patientData.gender.slice(1),
-        last_visit: existingPatient.lastVisit, // Preserve last visit date
+        last_visit: existingPatient.lastVisit, // preserve last visit date
         date_of_birth: patientData.dateOfBirth,
         phone: patientData.phone,
         email: patientData.email,
@@ -581,14 +581,14 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         medical_history: medicalHistoryArray,
         medications: medicationsArray,
         allergies: allergiesArray,
-        status: existingPatient.status, // Preserve status
-        condition: existingPatient.condition // Preserve condition
+        status: existingPatient.status, // preserve status
+        condition: existingPatient.condition // preserve condition
       };
 
       let response;
       let success = false;
 
-      // Try each API URL until one works
+      // try each API URL until one works
       for (let i = 0; i < API_URLS.length; i++) {
         try {
           const currentUrl = API_URLS[i];
@@ -603,7 +603,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
           });
 
           if (response.ok) {
-            // Update the current API URL if it's different
+            // update the current API URL if it's different
             if (currentUrl !== API_BASE_URL) {
               currentApiUrlIndex = i;
               API_BASE_URL = currentUrl;
@@ -623,10 +623,10 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       const updatedApiPatient = await response.json();
 
-      // Transform the API response to match frontend model
+      // transform the API response to match frontend model
       const updatedPatient = transformPatient(updatedApiPatient);
 
-      // Update local state
+      // update local state
       setPatients(prevPatients =>
         prevPatients.map(patient =>
           patient.id === patientId ? updatedPatient : patient
@@ -649,7 +649,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
       let response;
       let success = false;
 
-      // Try each API URL until one works
+      // try each API URL until one works
       for (let i = 0; i < API_URLS.length; i++) {
         try {
           const currentUrl = API_URLS[i];
@@ -660,7 +660,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
           });
 
           if (response.ok) {
-            // Update the current API URL if it's different
+            // update the current API URL if it's different
             if (currentUrl !== API_BASE_URL) {
               currentApiUrlIndex = i;
               API_BASE_URL = currentUrl;
@@ -678,7 +678,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
         throw new Error('Failed to remove patient from any API endpoint');
       }
 
-      // Update local state
+      // update local state
       setPatients(prevPatients => prevPatients.filter(patient => patient.id !== patientId));
 
       setError(null);
@@ -709,7 +709,7 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
   );
 };
 
-// Custom hook to use the patient context
+// custom hook to use the patient context
 export const usePatients = () => {
   const context = useContext(PatientContext);
   if (context === undefined) {

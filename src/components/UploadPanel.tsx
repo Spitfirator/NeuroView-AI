@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Upload, FileText, X, Plus, Clock } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
-// API URLs - try all ports to support different development environments
+// API URLs - try all 3 ports
 const API_URLS = ['http://localhost:8000', 'http://localhost:8001', 'http://localhost:8002'];
 
 const formatFileSize = (bytes: number): string => {
@@ -20,25 +20,25 @@ export default function UploadPanel() {
   const [isDragging, setIsDragging] = useState(false);
   const { analysis, updateAnalysis, addUploadedFile, removeUploadedFile, startProcessingTimer, stopProcessingTimer, updateElapsedTime } = useAnalysis();
 
-  // Timer effect to update elapsed time during processing
+  // timer effect to update elapsed time during processing
   useEffect(() => {
     let timerId: number | null = null;
 
     if (isUploading && analysis.processingStartTime) {
-      // Update elapsed time every 100ms
+      // update elapsed time every 100ms
       timerId = window.setInterval(() => {
         const currentTime = Date.now();
         const elapsed = currentTime - analysis.processingStartTime;
-        // Update the shared elapsed time in the context
+        // update the shared elapsed time in the context
         updateElapsedTime(elapsed);
       }, 100);
     } else if (!isUploading && analysis.processingEndTime) {
-      // When upload is complete, show final time
+      // when upload is complete, show final time
       if (analysis.processingDuration) {
-        // Set the final elapsed time
+        // set the final elapsed time
         updateElapsedTime(analysis.processingDuration);
       }
-      // Clear the interval
+      // clear the interval
       if (timerId) {
         clearInterval(timerId);
       }
@@ -77,25 +77,25 @@ export default function UploadPanel() {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
 
-    // Upload first file for prediction
+    // upload first file for prediction
     if (selectedFiles.length > 0) {
       setIsUploading(true);
-      // Reset elapsed time counter in the context
+      // set elapsed time counter in the context
       updateElapsedTime(0);
-      // Start the processing timer and reset any previous timer state
+      // start the processing timer and reset any previous timer state
       startProcessingTimer();
 
       const formData = new FormData();
       formData.append('file', selectedFiles[0]);
 
-      // Convert the image to base64 for storage
+      // convert the image to base64 for storage
       const base64Image = await convertFileToBase64(selectedFiles[0]);
 
       try {
         let response;
         let success = false;
 
-        // Try each API URL until one works
+        // try each API URL until one works
         for (let i = 0; i < API_URLS.length; i++) {
           try {
             const currentUrl = API_URLS[i];
@@ -126,7 +126,7 @@ export default function UploadPanel() {
         const result = await response.json();
 
         if (result.success) {
-          // Update with new results
+          // update with new results
           updateAnalysis({
             prediction: result.prediction,
             confidenceScores: result.confidence_scores,
@@ -136,9 +136,9 @@ export default function UploadPanel() {
             success: result.success
           });
 
-          // Stop the timer to calculate the final duration
+          // stop the timer to calculate the final duration
           stopProcessingTimer();
-          // Add file to context after successful upload
+          // add file to context after successful upload
           addUploadedFile(selectedFiles[0]);
         } else {
           console.error('Prediction failed:', result.error);
@@ -153,7 +153,7 @@ export default function UploadPanel() {
     }
   };
 
-  // Helper function to convert File to base64
+  // helper function to convert File to base64
   const convertFileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();

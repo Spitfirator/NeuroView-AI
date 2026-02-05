@@ -6,14 +6,14 @@ import GradCAMViewer from './GradCAMViewer';
 export default function ImageViewer() {
   const { analysis } = useAnalysis();
 
-  // Determine which image source to use
+  // determine which image source to use
   const imageSrc = analysis.imageUrl || 
                   (analysis.originalImageBase64 ? analysis.originalImageBase64 : null);
 
   if (!imageSrc) {
     return null;
   }
-
+// will implement in future 
   return (
     <div className="card overflow-hidden">
       <div className="relative bg-gray-900">
