@@ -42,10 +42,10 @@ export default function EditPatientModal({ isOpen, onClose, onSave, patient }: E
     allergies: '',
   });
 
-  // Initialize form data when patient changes
+  // initialise form data when patient changes
   useEffect(() => {
     if (patient) {
-      // Extract emergency contact name and phone
+      // extract emergency contact name and phone
       let emergencyContactName = '';
       let emergencyContactPhone = '';
       

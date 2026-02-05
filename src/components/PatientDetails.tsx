@@ -14,12 +14,12 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
   const [activeTab, setActiveTab] = useState<'overview' | 'studies' | 'reports'>('overview');
   const [isNewStudyModalOpen, setIsNewStudyModalOpen] = useState(false);
 
-  // Get patient data from context
+  // get patient data from context
   const { getPatient, addStudy, removeStudy } = usePatients();
   const { setCurrentStudy, updateAnalysisState } = useAnalysis();
   const patient = getPatient(patientId);
 
-  // Handle if patient not found
+  // handle if patient not found
   if (!patient) {
     return (
       <div className="py-12 text-center">
@@ -57,39 +57,39 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
       console.log(`Setting current study: Patient ID ${patientId}, Study ID ${studyId}`);
       console.log('Found study:', study);
 
-      // Create an update object for the analysis state
+      // create an update object for the analysis state
       const analysisUpdate: any = {};
 
-      // Check for analysis data with either property name
+      // check for analysis data with either property name
       const analysisData = study.analysisData || study.analysis_data;
 
-      // Debug log to see what's in the study
+      // debug log to see what's in the study
       console.log('Study object:', study);
       console.log('Analysis data from study:', analysisData);
 
-      // First, check if there is analysis data saved with the study
+      // first, check if there is analysis data saved with the study
       if (analysisData) {
         console.log('Loading saved analysis data:', analysisData);
 
-        // Restore analysis data fields
+        // restore analysis data fields
         analysisUpdate.prediction = analysisData.prediction || null;
         analysisUpdate.confidenceScores = analysisData.confidenceScores || {};
 
-        // Use the stored base64 image if available, otherwise use the thumbnail
+        // use the stored base64 image if available, otherwise use the thumbnail as backup
         analysisUpdate.originalImageBase64 = analysisData.originalImage || null;
         analysisUpdate.imageUrl = analysisData.originalImage || study.thumbnailUrl || null;
 
-        // Handle gradcam data
+        // handle gradcam data
         analysisUpdate.gradcam = analysisData.gradcam || null;
         analysisUpdate.gradcamUrl = analysisData.gradcamUrl || null;
 
-        // Keep track of the uploaded file names
+        // keep track of the uploaded file names
         analysisUpdate.uploadedFileNames = analysisData.uploadedFileNames || [];
-        analysisUpdate.uploadedFiles = []; // Reset the file objects as we can't recreate them
+        analysisUpdate.uploadedFiles = []; // reset the file objects as we can't recreate them
 
         analysisUpdate.timestamp = analysisData.timestamp || null;
 
-        // Restore processing time information if available
+        // restore processing time information if available
         if (analysisData.processingDuration) {
           analysisUpdate.processingStartTime = analysisData.processingStartTime || null;
           analysisUpdate.processingEndTime = analysisData.processingEndTime || null;
@@ -98,8 +98,8 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
           console.log('Restored processing time:', analysisUpdate.processingDuration, 'ms');
         }
 
-        // Restore radiologist's diagnosis and approval status if available
-        // Check if radiologistDiagnosis exists and is not null
+        // restore radiologist's diagnosis and approval status if available
+        // check if radiologistDiagnosis exists and is not null
         if (analysisData.radiologistDiagnosis !== undefined && analysisData.radiologistDiagnosis !== null) {
           analysisUpdate.radiologistDiagnosis = analysisData.radiologistDiagnosis;
           console.log('Restored radiologist diagnosis:', analysisData.radiologistDiagnosis);
@@ -107,7 +107,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
           console.log('No radiologist diagnosis found in saved data');
         }
 
-        // Check if approvalStatus exists and is not null
+        // check if approvalStatus exists and is not null
         if (analysisData.approvalStatus !== undefined && analysisData.approvalStatus !== null) {
           analysisUpdate.approvalStatus = analysisData.approvalStatus;
           analysisUpdate.approvalTimestamp = analysisData.approvalTimestamp || null;
@@ -119,7 +119,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
       }
       else {
         console.log('No analysis data found for this study');
-        // Initialize with empty analysis data
+        // initialise with empty analysis data
         analysisUpdate.imageUrl = study.thumbnailUrl || null;
         analysisUpdate.prediction = null;
         analysisUpdate.confidenceScores = {};
@@ -136,13 +136,13 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
 
       console.log('Updating analysis state with:', analysisUpdate);
 
-      // Update everything at once to avoid state synchronization issues
+      // update everything at once to avoid state synchronization issues
       updateAnalysisState(analysisUpdate);
 
-      // Set the current study context
+      // set the current study context
       setCurrentStudy(patientId, studyId);
 
-      // Navigate to study view
+      // navigate to study view
       onStudySelect(studyId);
     }
   };
@@ -398,7 +398,7 @@ export default function PatientDetails({ patientId, onBack, onStudySelect }: Pat
         </div>
       </div>
 
-      {/* New Study Modal */}
+      {/* new Study Modal */}
       <NewStudyModal
         isOpen={isNewStudyModalOpen}
         onClose={() => setIsNewStudyModalOpen(false)}

@@ -7,7 +7,7 @@ from .database import SessionLocal, Patient, Study
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
-# Models for request/response
+# models for request/response
 class StudyBase(BaseModel):
     type: str
     date: str
@@ -50,7 +50,7 @@ class PatientResponse(PatientBase):
     id: str
     studies: List[StudyResponse]
 
-# Dependency
+# dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -58,7 +58,7 @@ def get_db():
     finally:
         db.close()
 
-# Routes
+# routes
 @router.get("", response_model=List[PatientResponse])
 def get_patients(db: Session = Depends(get_db)):
     patients = db.query(Patient).all()
@@ -88,7 +88,7 @@ def get_patients(db: Session = Depends(get_db)):
             "studies": []
         }
 
-        # Safely handle studies without directly accessing patient.studies
+        # safely handle studies without directly accessing patient.studies
         try:
             studies = db.query(Study).filter(Study.patient_id == patient.id).all()
             patient_dict["studies"] = []
@@ -117,7 +117,7 @@ def get_patient(patient_id: str, db: Session = Depends(get_db)):
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    # Convert to response format
+    # convert to response format
     patient_data = {
         "id": patient.id,
         "name": patient.name,
@@ -139,7 +139,7 @@ def get_patient(patient_id: str, db: Session = Depends(get_db)):
         "studies": []
     }
 
-    # Explicitly query for studies to ensure we get all data
+    # explicitly query for studies to ensure we get all data
     studies = db.query(Study).filter(Study.patient_id == patient.id).all()
     for study in studies:
         patient_data["studies"].append({
@@ -156,11 +156,11 @@ def get_patient(patient_id: str, db: Session = Depends(get_db)):
 
 @router.post("", response_model=PatientResponse)
 def create_patient(patient: PatientCreate, db: Session = Depends(get_db)):
-    # Generate a unique ID
+    # generate a unique ID
     import uuid
     patient_id = f"patient-{uuid.uuid4()}"
 
-    # Create new patient object
+    # create new patient object
     db_patient = Patient(
         id=patient_id,
         name=patient.name,
@@ -185,17 +185,17 @@ def create_patient(patient: PatientCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_patient)
 
-    # Return the created patient
+    # return the created patient
     return get_patient(patient_id, db)
 
 @router.put("/{patient_id}", response_model=PatientResponse)
 def update_patient(patient_id: str, patient: PatientUpdate, db: Session = Depends(get_db)):
-    # Find patient
+    # find patient
     db_patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    # Update patient fields
+    # update patient fields
     db_patient.name = patient.name
     db_patient.age = patient.age
     db_patient.gender = patient.gender
@@ -216,21 +216,21 @@ def update_patient(patient_id: str, patient: PatientUpdate, db: Session = Depend
     db.commit()
     db.refresh(db_patient)
 
-    # Return the updated patient
+    # return the updated patient
     return get_patient(patient_id, db)
 
 @router.post("/{patient_id}/studies", response_model=StudyResponse)
 def add_study(patient_id: str, study: StudyCreate, db: Session = Depends(get_db)):
-    # Check if patient exists
+    # check if patient exists
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    # Generate a unique ID for the study
+    # generate a unique ID for the study
     import uuid
     study_id = f"study-{uuid.uuid4()}"
 
-    # Create new study
+    # create new study
     db_study = Study(
         id=study_id,
         patient_id=patient_id,
@@ -239,7 +239,7 @@ def add_study(patient_id: str, study: StudyCreate, db: Session = Depends(get_db)
         status=study.status,
         findings=study.findings,
         thumbnail_url=study.thumbnail_url,
-        analysis_data=None  # Initialize with None
+        analysis_data=None  # initialise to None 
     )
 
     db.add(db_study)
@@ -253,17 +253,17 @@ def add_study(patient_id: str, study: StudyCreate, db: Session = Depends(get_db)
         "status": db_study.status,
         "findings": db_study.findings,
         "thumbnail_url": db_study.thumbnail_url,
-        "analysis_data": None  # Include in response
+        "analysis_data": None  # include in response
     }
 
 @router.delete("/{patient_id}/studies/{study_id}")
 def delete_study(patient_id: str, study_id: str, db: Session = Depends(get_db)):
-    # Check if patient exists
+    # check if patient exists
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    # Find and delete the study
+    # find and delete the study
     study = db.query(Study).filter(Study.id == study_id, Study.patient_id == patient_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
@@ -275,12 +275,12 @@ def delete_study(patient_id: str, study_id: str, db: Session = Depends(get_db)):
 
 @router.delete("/{patient_id}")
 def delete_patient(patient_id: str, db: Session = Depends(get_db)):
-    # Find patient
+    # find patient
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    # Delete patient (studies will be automatically deleted due to cascade)
+    # delete patient (studies will be automatically deleted due to cascade)
     db.delete(patient)
     db.commit()
 
@@ -293,23 +293,23 @@ def update_study_analysis(
     analysis_data: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db)
 ):
-    # Check if patient exists
+    # check if patient exists
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    # Find the study
+    # find the study
     study = db.query(Study).filter(Study.id == study_id, Study.patient_id == patient_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
 
-    # Log the analysis data being saved
+    # log the analysis data being saved
     print(f"Saving analysis data for study {study_id}: {analysis_data}")
 
-    # Update the study with analysis data
+    # update the study with analysis data
     study.analysis_data = json.dumps(analysis_data)
 
-    # Update status to completed regardless of current status
+    # update status to completed regardless of current status
     study.status = "completed"
 
     db.commit()
@@ -327,17 +327,17 @@ def get_study(
     study_id: str,
     db: Session = Depends(get_db)
 ):
-    # Check if patient exists
+    # check if patient exists
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    # Find the study
+    # find the study
     study = db.query(Study).filter(Study.id == study_id, Study.patient_id == patient_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
 
-    # Return the study data, including analysis data if available
+    # return the study data, including analysis data if available
     return {
         "id": study.id,
         "patient_id": study.patient_id,

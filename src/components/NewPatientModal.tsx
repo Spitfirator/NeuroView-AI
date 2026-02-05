@@ -253,7 +253,7 @@ export default function NewPatientModal({ isOpen, onClose, onSave }: NewPatientM
                   placeholder="Enter medical history (separate items with commas)"
                   rows={3}
                 />
-                <p className="mt-1 text-xs text-gray-500">Separate multiple conditions with commas (e.g., "Hypertension, Diabetes, Asthma")</p>
+                <p className="mt-1 text-xs text-gray-500">Separate multiple conditions with commas (e.g., "Hypertension, Diabetes, Asthma")</p> 
               </div>
 
               <div>

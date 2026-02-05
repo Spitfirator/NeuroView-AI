@@ -34,7 +34,7 @@ Your role is to assist radiologists by providing general information about medic
   };
 
   const activateAssistant = () => {
-    // we initialize with welcome message
+    // we initialise with welcome message
     setMessages([
       {
         role: 'assistant',

@@ -14,7 +14,7 @@ interface Appointment {
   dateTime: string;
   details?: string;
 }
-
+// hardcoded for now but will be implemented in the future
 const upcomingAppointments: Appointment[] = [
   {
     id: '1',
@@ -49,28 +49,28 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
   const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
   const [patientToEdit, setPatientToEdit] = useState<string | null>(null);
 
-  // Get patients and patient management functions from context
+  // get patients and patient management functions from context
   const { patients, addPatient, updatePatient, removePatient } = usePatients();
 
-  // State for confirmation dialog
+  // state for confirmation dialog
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
 
-  // Filter patients based on search term
+  // filter patients based on search term
   const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.condition.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handle saving a new patient
+  // handle saving a new patient
   const handleSavePatient = (patientData: any) => {
     addPatient(patientData);
     setIsNewPatientModalOpen(false);
   };
 
-  // Handle patient editing
+  // handle patient editing
   const handleEditClick = (e: React.MouseEvent, patientId: string) => {
-    e.stopPropagation(); // Prevent triggering the parent onClick
+    e.stopPropagation(); // prevent triggering the parent onClick
     setPatientToEdit(patientId);
     setIsEditPatientModalOpen(true);
   };
@@ -81,9 +81,9 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
     setPatientToEdit(null);
   };
 
-  // Handle patient deletion
+  // handle patient deletion
   const handleDeleteClick = (e: React.MouseEvent, patientId: string) => {
-    e.stopPropagation(); // Prevent triggering the parent onClick
+    e.stopPropagation(); // prevent triggering the parent onClick
     setPatientToDelete(patientId);
     setShowDeleteConfirmation(true);
   };
@@ -323,14 +323,14 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
         </div>
       </div>
 
-      {/* New Patient Modal */}
+      {/* new Patient Modal */}
       <NewPatientModal
         isOpen={isNewPatientModalOpen}
         onClose={() => setIsNewPatientModalOpen(false)}
         onSave={handleSavePatient}
       />
 
-      {/* Edit Patient Modal */}
+      {/* edit Patient Modal */}
       <EditPatientModal
         isOpen={isEditPatientModalOpen}
         onClose={() => {
@@ -341,7 +341,7 @@ export default function PatientList({ onPatientSelect }: PatientListProps) {
         patient={patientToEdit ? patients.find(p => p.id === patientToEdit) || null : null}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* delete Confirmation Dialog */}
       {showDeleteConfirmation && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">

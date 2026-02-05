@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useAnalysis } from '../context/AnalysisContext';
 import { Brain, ChevronRight, X } from 'lucide-react';
 
-// API URLs - try both ports to support different development environments
+// under construction, not evaluated for the dissertation 
+
 const API_URLS = ['http://localhost:8000', 'http://localhost:8001'];
 
 export default function SimilarCases() {
@@ -19,7 +20,6 @@ export default function SimilarCases() {
       let response;
       let success = false;
 
-      // Try each API URL until one works
       for (let i = 0; i < API_URLS.length; i++) {
         try {
           const currentUrl = API_URLS[i];
@@ -78,7 +78,7 @@ export default function SimilarCases() {
         </div>
       </div>
 
-      {/* Modal for displaying similar cases */}
+      {/* modal for displaying similar cases */}
       {isOpen && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6">

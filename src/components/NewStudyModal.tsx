@@ -38,11 +38,11 @@ export default function NewStudyModal({ isOpen, onClose, onSave, patientName }: 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Transform the form data to match what the API expects
+    // transform the form data to match what the API expects
     const studyData = {
       type: formData.type,
-      date: `${formData.date}T${formData.time}`, // Combine date and time
-      findings: formData.description, // Map description to findings
+      date: `${formData.date}T${formData.time}`, 
+      findings: formData.description, // map description to findings
       status: formData.status,
       thumbnailUrl: getThumbnailForStudyType(formData.type), // Generate a thumbnail URL based on study type
     };
@@ -52,11 +52,11 @@ export default function NewStudyModal({ isOpen, onClose, onSave, patientName }: 
     onClose();
   };
 
-  // Helper function to provide sample thumbnail URLs based on study type
+  // helper function to provide sample thumbnail URLs based on study type
   const getThumbnailForStudyType = (type: string): string => {
     const thumbnails = {
       'MRI': 'https://placehold.co/200x200/e2f1ff/003380?text=MRI',
-      'CT Scan': 'https://placehold.co/200x200/f1f1f1/666666?text=CT+Scan',
+      'CT Scan': 'https://placehold.co/200x200/f1f1f1/666666?text=CT+Scan', // idea to implement CT, X-Ray, Ultrasound in future for interface 
       'X-Ray': 'https://placehold.co/200x200/f5f5f5/333333?text=X-Ray',
       'Ultrasound': 'https://placehold.co/200x200/e6f7ff/005599?text=Ultrasound',
     };
